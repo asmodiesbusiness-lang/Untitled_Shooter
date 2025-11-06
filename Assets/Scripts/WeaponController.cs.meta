@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 4d6dc73033d921a4989dfc858a29f390
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - muzzleFlash: {instanceID: 0}
+  - casingEjection: {instanceID: 0}
+  - muzzlePoint: {instanceID: 0}
+  - impactEffect: {instanceID: 0}
+  - weaponPivot: {instanceID: 0}
+  - laserOrigin: {instanceID: 0}
+  - shootSound: {instanceID: 0}
+  - reloadSound: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

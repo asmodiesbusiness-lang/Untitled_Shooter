@@ -1,0 +1,4 @@
+repository "Untitled_Shooter/Shooter_Game_Template@3573544232620@cloud"
+  path "/"
+    br "/main"
+    co "/main"

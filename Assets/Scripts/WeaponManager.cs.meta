@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 76b48f3c5dad1ea4da8fb10bea46c510
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - weaponHolder: {fileID: 2778055816893767412, guid: 13d67a49f9b870344a1522a09e345f0e, type: 3}
+  - sharedMuzzleFlash: {fileID: 5632565912005163173, guid: 9f937b65a79458f47a287a89c482e6e8, type: 3}
+  - sharedCasingEjection: {instanceID: 0}
+  - impactEffect: {fileID: 5962924905440704176, guid: 3995c8aebdd556a42abd2d5dac3fa514, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
