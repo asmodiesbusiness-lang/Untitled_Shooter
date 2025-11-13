@@ -68,5 +68,50 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 5112731102878130267, guid: 9cbc5537295089440a3283ffadc90508, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9cbc5537295089440a3283ffadc90508, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4578603071603249088}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9cbc5537295089440a3283ffadc90508, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 829756009191186932}
   m_SourcePrefab: {fileID: 100100000, guid: 9cbc5537295089440a3283ffadc90508, type: 3}
+--- !u!1 &7474935357243816137 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 9cbc5537295089440a3283ffadc90508, type: 3}
+  m_PrefabInstance: {fileID: 7745390689588561304}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4578603071603249088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7474935357243816137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65208ec10b00b2d46a24b2f1a504eab5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponController
+  muzzlePoint: {fileID: 0}
+--- !u!114 &829756009191186932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7474935357243816137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 541f35a7e379ef348a813568b23d6ef0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DualPointRecoil
+  autoSetup: 1
+  weaponRoot: {fileID: 0}
+  weaponModel: {fileID: 0}
+  gripLocalPosition: {x: 0, y: -0.1, z: -0.2}
+  stockRotationAmount: 2
+  stockRotationSpeed: 8
+  barrelKickAmount: 0.05
+  barrelKickSpeed: 10
+  recoverySpeed: 5

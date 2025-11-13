@@ -291,4 +291,4 @@ public class WeaponCollisionSystem : MonoBehaviour
         Vector3 direction = (weaponPos - cameraPos).normalized;
         Gizmos.DrawLine(cameraPos, weaponPos + direction * detectionDistance);
     }
-}
+} 

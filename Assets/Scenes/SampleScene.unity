@@ -230,11 +230,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 76373230}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &141478785 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-  m_PrefabInstance: {fileID: 3668222263635296826}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &161952169
 GameObject:
   m_ObjectHideFlags: 0
@@ -249,9 +244,10 @@ GameObject:
   - component: {fileID: 161952177}
   - component: {fileID: 161952176}
   - component: {fileID: 161952180}
-  - component: {fileID: 161952170}
   - component: {fileID: 161952179}
+  - component: {fileID: 161952170}
   - component: {fileID: 161952181}
+  - component: {fileID: 161952182}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -380,10 +376,10 @@ MonoBehaviour:
   crouchSpeed: 2.5
   proneSpeed: 1.5
   controller: {fileID: 161952170}
-  gravity: -20
+  gravity: -15
   standingHeight: 1.85
   crouchHeight: 1.2
-  proneHeight: 0.3
+  proneHeight: 0.1
   crouchTransitionSpeed: 10
   crouchKey: 306
   slideKey: 118
@@ -427,21 +423,13 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   enableWeaponSnap: 1
-  snapYawOnly: 1
-  rotationTolerance: 5
+  maxRotationX: 45
+  maxRotationY: 60
+  maxRotationZ: 30
   positionTolerance: 0.05
-  snapSpeed: 0
-  pauseSnapDuringReload: 1
-  pauseSnapDuringSwitch: 1
-  pauseSnapDuringDive: 1
+  pauseSnapDuringADS: 1
   pauseSnapWhileProne: 1
   weaponHolder: {fileID: 5704815837653817621}
-  diveRollAngle: 90
-  diveRotationSpeed: 8
-  diveRollAxis: {x: 1, y: 0, z: 1}
-  keepWeaponUpright: 1
-  weaponCameraFollowStrength: 0.7
-  weaponFollowSpeed: 8
   diveVerticalForce: 6
   diveHorizontalForce: 15
   diveDuration: 1
@@ -483,10 +471,11 @@ MonoBehaviour:
     m_RotationOrder: 4
   reduceColliderDuringDive: 1
   colliderHeightDuringDive: 0.3
+  diveRollAngle: 90
+  diveRotationSpeed: 8
+  diveRollAxis: {x: 1, y: 1, z: 1}
+  keepWeaponUpright: 1
   showDebugInfo: 1
-  showGroundGizmos: 1
-  showDiveDebug: 1
-  logStateChanges: 1
 --- !u!114 &161952177
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -503,7 +492,7 @@ MonoBehaviour:
   weaponHolder: {fileID: 5704815837653817621}
   weaponManager: {fileID: 330585548}
   mouseSensitivity: 2
-  verticalLookLimit: 90
+  verticalLookLimit: 45
   leanAngle: 15
   leanSpeed: 10
 --- !u!114 &161952179
@@ -520,16 +509,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterAnimatorController
   playerCamera: {fileID: 330585545}
   playerMovement: {fileID: 161952176}
-  weaponManager: {fileID: 0}
+  weaponManager: {fileID: 330585548}
   weaponPivot: {fileID: 575139751}
   leftHand: {fileID: 0}
   rightHand: {fileID: 0}
   baseAdsPosition: {x: 0, y: -0.05, z: 0.35}
   defaultAdsSpeed: 10
-  defaultAdsFOV: 40
+  defaultAdsFOV: 45
   adsPosition: {x: -0.2, y: -0.1, z: 0.3}
   adsSpeed: 10
-  adsFOV: 95
+  adsFOV: 45
   normalFOV: 60
   adsRecoilMultiplier: 0.5
   adsSwayMultiplier: 0.035
@@ -655,7 +644,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 161952169}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 567aa48ac16e89646b9e97cb4143e331, type: 3}
   m_Name: 
@@ -688,15 +677,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScopeManager
   playerCamera: {fileID: 330585545}
-  weaponManager: {fileID: 330585548}
-  weaponHolder: {fileID: 5704815837653817621}
+  weaponManager: {fileID: 161952182}
   adsKey: 325
-  cycleScopeKey: 98
-  scrollAxisName: Mouse ScrollWheel
-  enableScopeModels: 1
-  enableReticleOverlay: 1
   showDebugInfo: 1
-  showZoomSteps: 1
+--- !u!114 &161952182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 161952169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76b48f3c5dad1ea4da8fb10bea46c510, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponManager
+  weaponHolder: {fileID: 2778055816893767412, guid: 13d67a49f9b870344a1522a09e345f0e, type: 3}
+  availableWeapons:
+  - {fileID: 11400000, guid: 676260aa69ba0ed44b93dfcd1db65173, type: 2}
+  - {fileID: 11400000, guid: 94ddbf77790df9a4fa4535034b5c5a99, type: 2}
+  - {fileID: 11400000, guid: bbaf078ece513104c98d58afd5ff9c1a, type: 2}
+  startingWeaponIndex: 0
+  switchDelay: 0.5
+  nextWeaponKey: 321
+  previousWeaponKey: 322
 --- !u!1 &276254377
 GameObject:
   m_ObjectHideFlags: 0
@@ -1071,41 +1075,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76b48f3c5dad1ea4da8fb10bea46c510, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponManager
+  weaponHolder: {fileID: 5704815837653817621}
   availableWeapons:
   - {fileID: 11400000, guid: 676260aa69ba0ed44b93dfcd1db65173, type: 2}
   - {fileID: 11400000, guid: 94ddbf77790df9a4fa4535034b5c5a99, type: 2}
   - {fileID: 11400000, guid: bbaf078ece513104c98d58afd5ff9c1a, type: 2}
-  - {fileID: 0}
   startingWeaponIndex: 0
-  weaponHolder: {fileID: 5704815837653817621}
-  sharedMuzzleFlash: {fileID: 5632565912005163173, guid: 9f937b65a79458f47a287a89c482e6e8, type: 3}
-  impactEffect: {fileID: 5962924905440704176, guid: 3995c8aebdd556a42abd2d5dac3fa514, type: 3}
-  switchTime: 0.5
-  switchCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  blockSwitchingDuringADS: 1
+  switchDelay: 0.5
+  nextWeaponKey: 321
+  previousWeaponKey: 322
 --- !u!1 &357938860
 GameObject:
   m_ObjectHideFlags: 0
@@ -4031,7 +4009,6 @@ Transform:
   - {fileID: 276254378}
   - {fileID: 719835811}
   - {fileID: 888431811}
-  - {fileID: 141478785}
   - {fileID: 357938864}
   - {fileID: 981820411}
   - {fileID: 1346523949}
@@ -4769,63 +4746,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 51886b33324eaf94da51cb7277bccd30, type: 3}
---- !u!1001 &3668222263635296826
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 1937695419}
-    m_Modifications:
-    - target: {fileID: 189543178970402249, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_Name
-      value: MarksmenRifle
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 714581578114750323, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
 --- !u!1001 &3892778861397698722
 PrefabInstance:
   m_ObjectHideFlags: 0

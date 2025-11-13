@@ -68,53 +68,36 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 slideDirection;
     private float lastSlideTime;
 
-    [Header("=== CONTINUOUS WEAPON SNAP ===")]
-    [Tooltip("Enable continuous weapon snap system")]
+    [Header("=== WEAPON SNAP ===")]
     [SerializeField] private bool enableWeaponSnap = true;
-
-    [Tooltip("Only snap Y rotation (yaw) - allows free pitch/roll from breathing/bob")]
-    [SerializeField] private bool snapYawOnly = true;
-
-    [Tooltip("Acceptable rotation deviation (degrees) - weapon snaps if outside this")]
-    [SerializeField] private float rotationTolerance = 15f;
-
-    [Tooltip("Acceptable position deviation (meters) - weapon snaps if outside this")]
-    [SerializeField] private float positionTolerance = 0.15f;
-
-    [Tooltip("Snap speed (0 = instant, higher = smoother but slower)")]
-    [SerializeField] private float snapSpeed = 0f;
-
-    [Tooltip("Pause snap during these states")]
-    [SerializeField] private bool pauseSnapDuringReload = true;
-    [SerializeField] private bool pauseSnapDuringSwitch = true;
-    [SerializeField] private bool pauseSnapDuringDive = true;
+    [SerializeField] private float maxRotationX = 45f;
+    [SerializeField] private float maxRotationY = 60f;
+    [SerializeField] private float maxRotationZ = 30f;
+    [SerializeField] private float positionTolerance = 0.2f;
+    [SerializeField] private bool pauseSnapDuringADS = true;
     [SerializeField] private bool pauseSnapWhileProne = true;
-
     [SerializeField] private Transform weaponHolder;
 
     private Vector3 weaponOriginalPosition;
     private Quaternion weaponOriginalRotation;
     private bool weaponTransformStored = false;
 
-    [Header("=== DIVE ROTATION ===")]
-    [SerializeField] private float diveRollAngle = 360f;
-    [SerializeField] private float diveRotationSpeed = 8f;
-    [SerializeField] private Vector3 diveRollAxis = new Vector3(1, 0, 0);
-    [SerializeField] private bool keepWeaponUpright = true;
-    [Range(0f, 1f)]
-    [SerializeField] private float weaponCameraFollowStrength = 0.7f;
-    [SerializeField] private float weaponFollowSpeed = 8f;
-
     [Header("=== DIVE SETTINGS ===")]
     [SerializeField] private float diveVerticalForce = 3f;
     [SerializeField] private float diveHorizontalForce = 8f;
     [SerializeField] private float diveDuration = 1.5f;
     [SerializeField] private float diveMinAirTime = 0.3f;
-    [SerializeField] private float diveGroundDetectionDistance = 0.2f;
+    [SerializeField] private float diveGroundDetectionDistance = 0.5f;
     [SerializeField] private float diveCooldown = 2f;
     [SerializeField] private AnimationCurve diveJumpCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);
     [SerializeField] private bool reduceColliderDuringDive = true;
     [SerializeField] private float colliderHeightDuringDive = 0.8f;
+
+    [Header("=== DIVE ROTATION ===")]
+    [SerializeField] private float diveRollAngle = 360f;
+    [SerializeField] private float diveRotationSpeed = 8f;
+    [SerializeField] private Vector3 diveRollAxis = new Vector3(1, 0, 0);
+    [SerializeField] private bool keepWeaponUpright = true;
 
     private bool isDiving;
     private float diveTimer;
@@ -123,12 +106,10 @@ public class PlayerMovement : MonoBehaviour
     private Quaternion diveStartRotation;
     private float originalControllerHeight;
     private float distanceToGround;
+    private bool diveEndedInAir;
 
     [Header("=== DEBUG ===")]
     [SerializeField] private bool showDebugInfo = true;
-    [SerializeField] private bool showGroundGizmos = true;
-    [SerializeField] private bool showDiveDebug = true;
-    [SerializeField] private bool logStateChanges = false;
 
     private Camera playerCamera;
     private ScopeManager scopeManager;
@@ -144,8 +125,6 @@ public class PlayerMovement : MonoBehaviour
         originalControllerHeight = standingHeight;
         currentSpeed = walkSpeed;
         controller.center = Vector3.zero;
-        controller.minMoveDistance = 0.001f;
-        controller.skinWidth = 0.08f;
 
         if (groundCheck == null)
         {
@@ -156,168 +135,141 @@ public class PlayerMovement : MonoBehaviour
         groundCheck.localPosition = groundCheckOffset;
 
         playerCamera = GetComponentInChildren<Camera>();
-        if (playerCamera == null)
-            playerCamera = Camera.main;
+        if (playerCamera == null) playerCamera = Camera.main;
 
-        scopeManager = GetComponent<ScopeManager>();
-        if (scopeManager == null)
-            scopeManager = GetComponentInChildren<ScopeManager>();
-        if (scopeManager == null)
-            scopeManager = FindFirstObjectByType<ScopeManager>();
-
+        scopeManager = FindFirstObjectByType<ScopeManager>();
         weaponManager = GetComponentInChildren<WeaponManager>();
-        if (weaponManager == null)
-            weaponManager = FindFirstObjectByType<WeaponManager>();
 
         if (weaponHolder != null)
-        {
             StoreWeaponTransform();
-        }
     }
 
     void StoreWeaponTransform()
     {
-        if (weaponHolder != null)
-        {
-            weaponOriginalPosition = weaponHolder.localPosition;
-            weaponOriginalRotation = weaponHolder.localRotation;
-            weaponTransformStored = true;
-        }
+        weaponOriginalPosition = weaponHolder.localPosition;
+        weaponOriginalRotation = weaponHolder.localRotation;
+        weaponTransformStored = true;
     }
 
     void Update()
     {
-        groundCheck.localPosition = groundCheckOffset;
-
         if (weaponManager != null)
             currentWeapon = weaponManager.GetCurrentWeapon();
 
         CheckGround();
-        HandleContinuousWeaponSnap();
+        HandleWeaponSnap();
         HandleStance();
         HandleDive();
         HandleSlide();
         HandleMovement();
         HandleJump();
-        HandleWeaponFollowCamera();
         ApplyGravity();
     }
 
     void OnGUI()
     {
         if (showDebugInfo)
-        {
             DrawDebugOverlay();
-        }
     }
 
     void CheckGround()
     {
-        bool wasGrounded = isGrounded;
         isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask);
 
         RaycastHit hit;
         if (Physics.Raycast(transform.position, Vector3.down, out hit, 10f, groundMask))
-        {
             distanceToGround = hit.distance;
-        }
         else
-        {
             distanceToGround = 999f;
-        }
 
         if (isGrounded)
         {
             lastGroundedTime = Time.time;
+
+            if (diveEndedInAir && !isDiving)
+            {
+                targetStance = Stance.Prone;
+                currentStance = Stance.Prone;
+                controller.height = proneHeight;
+                diveEndedInAir = false;
+            }
 
             if (velocity.y < 0)
                 velocity.y = -2f;
         }
     }
 
-    void HandleContinuousWeaponSnap()
+    void HandleWeaponSnap()
     {
-        if (!enableWeaponSnap || weaponHolder == null || !weaponTransformStored)
+        if (!enableWeaponSnap || weaponHolder == null || !weaponTransformStored || isDiving)
             return;
 
-        bool shouldPauseSnap = false;
+        bool shouldPause = false;
 
-        if (pauseSnapDuringDive && isDiving)
-            shouldPauseSnap = true;
-
-        if (pauseSnapDuringReload && currentWeapon != null && currentWeapon.IsReloading())
-            shouldPauseSnap = true;
+        if (pauseSnapDuringADS && scopeManager != null && scopeManager.IsADS())
+            shouldPause = true;
 
         if (pauseSnapWhileProne && currentStance == Stance.Prone)
-            shouldPauseSnap = true;
+            shouldPause = true;
 
-        if (shouldPauseSnap)
+        if (shouldPause)
             return;
 
         Vector3 currentEuler = weaponHolder.localRotation.eulerAngles;
         Vector3 targetEuler = weaponOriginalRotation.eulerAngles;
 
-        bool rotationOutOfBounds = false;
+        float xDiff = Mathf.DeltaAngle(currentEuler.x, targetEuler.x);
+        float yDiff = Mathf.DeltaAngle(currentEuler.y, targetEuler.y);
+        float zDiff = Mathf.DeltaAngle(currentEuler.z, targetEuler.z);
 
-        if (snapYawOnly)
+        if (Mathf.Abs(xDiff) > maxRotationX || Mathf.Abs(yDiff) > maxRotationY || Mathf.Abs(zDiff) > maxRotationZ)
         {
-            float yDiff = Mathf.DeltaAngle(currentEuler.y, targetEuler.y);
-            rotationOutOfBounds = Mathf.Abs(yDiff) > rotationTolerance;
-        }
-        else
-        {
-            float xDiff = Mathf.DeltaAngle(currentEuler.x, targetEuler.x);
-            float yDiff = Mathf.DeltaAngle(currentEuler.y, targetEuler.y);
-            float zDiff = Mathf.DeltaAngle(currentEuler.z, targetEuler.z);
+            Vector3 clampedEuler = currentEuler;
 
-            rotationOutOfBounds = Mathf.Abs(xDiff) > rotationTolerance ||
-                                  Mathf.Abs(yDiff) > rotationTolerance ||
-                                  Mathf.Abs(zDiff) > rotationTolerance;
+            if (Mathf.Abs(xDiff) > maxRotationX)
+                clampedEuler.x = ClampAngle(currentEuler.x, targetEuler.x - maxRotationX, targetEuler.x + maxRotationX);
+
+            if (Mathf.Abs(yDiff) > maxRotationY)
+                clampedEuler.y = ClampAngle(currentEuler.y, targetEuler.y - maxRotationY, targetEuler.y + maxRotationY);
+
+            if (Mathf.Abs(zDiff) > maxRotationZ)
+                clampedEuler.z = ClampAngle(currentEuler.z, targetEuler.z - maxRotationZ, targetEuler.z + maxRotationZ);
+
+            weaponHolder.localRotation = Quaternion.Euler(clampedEuler);
         }
 
         float positionDistance = Vector3.Distance(weaponHolder.localPosition, weaponOriginalPosition);
-        bool positionOutOfBounds = positionDistance > positionTolerance;
-
-        if (rotationOutOfBounds)
+        if (positionDistance > positionTolerance)
         {
-            if (snapSpeed <= 0.01f)
-            {
-                if (snapYawOnly)
-                {
-                    Vector3 fixedEuler = weaponHolder.localRotation.eulerAngles;
-                    fixedEuler.y = weaponOriginalRotation.eulerAngles.y;
-                    weaponHolder.localRotation = Quaternion.Euler(fixedEuler);
-                }
-                else
-                {
-                    weaponHolder.localRotation = weaponOriginalRotation;
-                }
-            }
-            else
-            {
-                weaponHolder.localRotation = Quaternion.Slerp(
-                    weaponHolder.localRotation,
-                    weaponOriginalRotation,
-                    Time.deltaTime * snapSpeed
-                );
-            }
+            Vector3 direction = (weaponHolder.localPosition - weaponOriginalPosition).normalized;
+            weaponHolder.localPosition = weaponOriginalPosition + direction * positionTolerance;
+        }
+    }
+
+    float ClampAngle(float current, float min, float max)
+    {
+        current = NormalizeAngle(current);
+        min = NormalizeAngle(min);
+        max = NormalizeAngle(max);
+
+        if (min > max)
+        {
+            if (current > min || current < max)
+                return current;
+
+            float distToMin = Mathf.Abs(Mathf.DeltaAngle(current, min));
+            float distToMax = Mathf.Abs(Mathf.DeltaAngle(current, max));
+            return distToMin < distToMax ? min : max;
         }
 
-        if (positionOutOfBounds)
-        {
-            if (snapSpeed <= 0.01f)
-            {
-                weaponHolder.localPosition = weaponOriginalPosition;
-            }
-            else
-            {
-                weaponHolder.localPosition = Vector3.Lerp(
-                    weaponHolder.localPosition,
-                    weaponOriginalPosition,
-                    Time.deltaTime * snapSpeed
-                );
-            }
-        }
+        return Mathf.Clamp(current, min, max);
+    }
+
+    float NormalizeAngle(float angle)
+    {
+        while (angle > 180f) angle -= 360f;
+        while (angle < -180f) angle += 360f;
+        return angle;
     }
 
     void HandleStance()
@@ -338,8 +290,7 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             crouchHoldTimer = 0f;
-
-            if (targetStance != Stance.Standing && currentStance != Stance.Prone)
+            if (targetStance != Stance.Standing)
                 targetStance = Stance.Standing;
         }
 
@@ -359,13 +310,7 @@ public class PlayerMovement : MonoBehaviour
                 break;
         }
 
-        float prevHeight = controller.height;
         controller.height = Mathf.Lerp(controller.height, targetHeight, crouchTransitionSpeed * Time.deltaTime);
-        controller.center = Vector3.zero;
-
-        float heightDiff = prevHeight - controller.height;
-        if (heightDiff > 0.01f)
-            transform.position += Vector3.up * heightDiff;
 
         if (Mathf.Abs(controller.height - targetHeight) < 0.05f)
             currentStance = targetStance;
@@ -383,28 +328,10 @@ public class PlayerMovement : MonoBehaviour
 
             controller.Move(diveDirection * diveHorizontalForce * curve * Time.deltaTime);
 
-            Transform rotateTarget = (keepWeaponUpright && weaponHolder != null) ? transform : (weaponHolder != null ? weaponHolder : transform);
-
-            float rollProgress = Mathf.Clamp01(t);
-            float currentAngle = diveRollAngle * rollProgress;
-            Vector3 rollEuler = diveRollAxis.normalized * currentAngle;
-            Quaternion targetRoll = diveStartRotation * Quaternion.Euler(rollEuler);
-
-            if (!keepWeaponUpright || rotateTarget == transform)
-            {
-                rotateTarget.rotation = Quaternion.Slerp(rotateTarget.rotation, targetRoll, Time.deltaTime * diveRotationSpeed);
-            }
-
-            bool enoughAirTime = diveTimer >= diveMinAirTime;
-            bool closeToGround = distanceToGround <= diveGroundDetectionDistance;
-            bool diveTimeExpired = diveTimer >= diveDuration;
-
-            bool shouldEndDive = (enoughAirTime && (isGrounded || closeToGround)) || diveTimeExpired;
+            bool shouldEndDive = (diveTimer >= diveMinAirTime && (isGrounded || distanceToGround <= diveGroundDetectionDistance)) || diveTimer >= diveDuration;
 
             if (shouldEndDive)
-            {
                 EndDive();
-            }
 
             return;
         }
@@ -415,9 +342,7 @@ public class PlayerMovement : MonoBehaviour
             dir = transform.TransformDirection(dir);
 
             if (dir.magnitude >= 0.1f)
-            {
                 StartDive(dir.normalized);
-            }
         }
     }
 
@@ -428,48 +353,23 @@ public class PlayerMovement : MonoBehaviour
         diveTimer = 0f;
         lastDiveTime = Time.time;
         velocity.y = diveVerticalForce;
-
-        if (keepWeaponUpright && weaponHolder != null)
-        {
-            diveStartRotation = transform.rotation;
-        }
-        else if (weaponHolder != null)
-        {
-            diveStartRotation = weaponHolder.rotation;
-        }
-        else
-        {
-            diveStartRotation = transform.rotation;
-        }
-
-        if (reduceColliderDuringDive)
-        {
-            originalControllerHeight = controller.height;
-            controller.height = colliderHeightDuringDive;
-            controller.center = Vector3.zero;
-        }
+        diveEndedInAir = false;
     }
 
     void EndDive()
     {
         isDiving = false;
 
-        controller.height = proneHeight;
-        controller.center = Vector3.zero;
-        targetStance = Stance.Prone;
-        currentStance = Stance.Prone;
-    }
-
-    void HandleWeaponFollowCamera()
-    {
-        if (weaponHolder == null || playerCamera == null || isDiving) return;
-
-        float cameraYaw = playerCamera.transform.eulerAngles.y;
-        Quaternion targetRotation = Quaternion.Euler(0, cameraYaw, 0);
-        Quaternion currentRotation = weaponHolder.localRotation;
-        Quaternion blendedRotation = Quaternion.Slerp(Quaternion.identity, targetRotation, weaponCameraFollowStrength);
-
-        weaponHolder.localRotation = Quaternion.Slerp(currentRotation, blendedRotation, Time.deltaTime * weaponFollowSpeed);
+        if (isGrounded)
+        {
+            controller.height = proneHeight;
+            targetStance = Stance.Prone;
+            currentStance = Stance.Prone;
+        }
+        else
+        {
+            diveEndedInAir = true;
+        }
     }
 
     void HandleSlide()
@@ -480,18 +380,6 @@ public class PlayerMovement : MonoBehaviour
         {
             slideTimer += Time.deltaTime;
             controller.Move(slideDirection * slideSpeed * Time.deltaTime);
-
-            float t = slideTimer / slideDuration;
-            float curve = slideHeightCurve.Evaluate(t);
-            float heightMult = 1f - (curve * 0.6f);
-
-            float prevHeight = controller.height;
-            controller.height = Mathf.Lerp(controller.height, standingHeight * heightMult, Time.deltaTime * 15f);
-            controller.center = Vector3.zero;
-
-            float heightDiff = prevHeight - controller.height;
-            if (heightDiff > 0.01f)
-                transform.position += Vector3.up * heightDiff;
 
             if (slideTimer >= slideDuration)
             {
@@ -512,7 +400,6 @@ public class PlayerMovement : MonoBehaviour
             slideDirection = dir.normalized;
             isSliding = true;
             lastSlideTime = Time.time;
-            slideTimer = 0f;
         }
     }
 
@@ -563,110 +450,56 @@ public class PlayerMovement : MonoBehaviour
 
     void DrawDebugOverlay()
     {
-        GUILayout.BeginArea(new Rect(10, 10, 450, 550));
+        GUILayout.BeginArea(new Rect(10, 10, 400, 400));
         GUILayout.Box("=== PLAYER MOVEMENT DEBUG ===");
 
-        GUILayout.Label("Stance: " + currentStance + " -> " + targetStance);
-        GUILayout.Label("Grounded: " + (isGrounded ? "YES" : "NO") + " (Dist: " + distanceToGround.ToString("F2") + "m)");
-        GUILayout.Label("Velocity: " + velocity.magnitude.ToString("F2") + " m/s");
+        GUILayout.Label("Stance: " + currentStance);
+        GUILayout.Label("Grounded: " + (isGrounded ? "YES" : "NO"));
         GUILayout.Label("Speed: " + currentSpeed.ToString("F1") + " m/s");
 
         if (scopeManager != null)
+            GUILayout.Label("ADS: " + (scopeManager.IsADS() ? "YES" : "NO"));
+
+        if (enableWeaponSnap && weaponHolder != null)
         {
-            bool isADS = scopeManager.IsADS();
-            GUILayout.Label("ADS: " + (isADS ? "YES" : "NO"));
-        }
-        else
-        {
-            GUILayout.Label("ADS: SCOPE MANAGER NOT FOUND");
-        }
+            bool snapPaused = (pauseSnapDuringADS && scopeManager != null && scopeManager.IsADS()) ||
+                              (pauseSnapWhileProne && currentStance == Stance.Prone);
 
-        if (enableWeaponSnap && weaponHolder != null && weaponTransformStored)
-        {
-            Vector3 currentEuler = weaponHolder.localRotation.eulerAngles;
-            Vector3 targetEuler = weaponOriginalRotation.eulerAngles;
-
-            float xDiff = Mathf.Abs(Mathf.DeltaAngle(currentEuler.x, targetEuler.x));
-            float yDiff = Mathf.Abs(Mathf.DeltaAngle(currentEuler.y, targetEuler.y));
-            float zDiff = Mathf.Abs(Mathf.DeltaAngle(currentEuler.z, targetEuler.z));
-
-            float posDist = Vector3.Distance(weaponHolder.localPosition, weaponOriginalPosition);
-
-            bool rotOK = (snapYawOnly && yDiff < rotationTolerance) ||
-                         (!snapYawOnly && xDiff < rotationTolerance && yDiff < rotationTolerance && zDiff < rotationTolerance);
-            bool posOK = posDist < positionTolerance;
-
-            string rotStatus = rotOK ? "OK" : "OUT (" + (snapYawOnly ? yDiff.ToString("F1") : Mathf.Max(xDiff, yDiff, zDiff).ToString("F1")) + "deg)";
-            string posStatus = posOK ? "OK" : "OUT (" + posDist.ToString("F3") + "m)";
-
-            GUILayout.Label("Weapon Snap: Rot=" + rotStatus + " Pos=" + posStatus);
-            GUILayout.Label("  Mode: " + (snapYawOnly ? "YAW ONLY" : "ALL AXES"));
-            GUILayout.Label("  Tolerance: Rot=" + rotationTolerance + "deg Pos=" + positionTolerance.ToString("F3") + "m");
-            GUILayout.Label("  Speed: " + (snapSpeed <= 0.01f ? "INSTANT" : snapSpeed.ToString("F1")));
-
-            if (pauseSnapDuringDive && isDiving)
-                GUILayout.Label("  Snap PAUSED: Diving");
-            else if (pauseSnapDuringReload && currentWeapon != null && currentWeapon.IsReloading())
-                GUILayout.Label("  Snap PAUSED: Reloading");
-            else if (pauseSnapWhileProne && currentStance == Stance.Prone)
-                GUILayout.Label("  Snap PAUSED: Prone");
-            else
-                GUILayout.Label("  Snap ACTIVE");
-        }
-
-        if (isDiving)
-        {
-            GUILayout.Label("=== DIVING ===");
-            GUILayout.Label("Timer: " + diveTimer.ToString("F2") + "s / " + diveDuration.ToString("F2") + "s");
-            GUILayout.Label("Progress: " + ((diveTimer / diveDuration) * 100).ToString("F0") + "%");
-            GUILayout.Label("Min Air Time: " + (diveTimer >= diveMinAirTime ? "MET" : "WAITING"));
-            GUILayout.Label("Ground Dist: " + distanceToGround.ToString("F2") + "m");
-        }
-
-        if (weaponHolder != null)
-        {
-            GUILayout.Label("Weapon Follow: " + weaponCameraFollowStrength.ToString("F2") + " @ " + weaponFollowSpeed.ToString("F1"));
+            GUILayout.Label("Weapon Snap: " + (snapPaused ? "PAUSED" : "ACTIVE"));
         }
 
         GUILayout.EndArea();
     }
 
-    void OnDrawGizmosSelected()
-    {
-        if (!showGroundGizmos) return;
-
-        if (groundCheck != null)
-        {
-            Gizmos.color = isGrounded ? Color.green : Color.red;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
-
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(transform.position, transform.position + Vector3.down * distanceToGround);
-        }
-
-        if (showDiveDebug && isDiving)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawRay(transform.position, diveDirection * 2f);
-
-            Gizmos.color = Color.magenta;
-            Gizmos.DrawWireSphere(transform.position + Vector3.down * diveGroundDetectionDistance, 0.1f);
-        }
-    }
-
     public bool IsSliding() => isSliding;
     public bool IsDiving() => isDiving;
-    public bool IsRolling() => isSliding;
     public bool IsProne() => currentStance == Stance.Prone;
     public bool IsGrounded() => isGrounded;
-    public float GetCurrentSpeed() => currentSpeed;
     public bool isCrouching => currentStance == Stance.Crouching;
+
+    // New methods required by CharacterAnimatorController
+    public float GetCurrentSpeed()
+    {
+        // Return the actual movement speed of the character
+        if (controller != null)
+        {
+            // Calculate horizontal speed (ignoring Y velocity)
+            Vector3 horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
+            return horizontalVelocity.magnitude;
+        }
+        return currentSpeed;
+    }
+
+    public bool IsRolling()
+    {
+        // Rolling is essentially the same as diving in this implementation
+        // You can customize this logic if you want rolling to be different from diving
+        return isDiving;
+    }
 
     public void OnWeaponChanged()
     {
         if (weaponHolder != null)
-        {
             Invoke(nameof(StoreWeaponTransform), 0.1f);
-        }
     }
 }

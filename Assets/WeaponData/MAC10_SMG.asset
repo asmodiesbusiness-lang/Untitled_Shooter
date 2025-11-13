@@ -13,106 +13,64 @@ MonoBehaviour:
   m_Name: MAC10_SMG
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
   weaponName: MAC10
-  weaponType: 2
-  weaponModelPrefab: {fileID: 919132149155446097, guid: 6f369817827496042ae743aefe31dd8f, type: 3}
-  handPreference: 0
-  weaponHolderPosition: {x: 0.3, y: -0.25, z: 0.6}
-  weaponHolderRotation: {x: 0, y: 0, z: 0}
-  pivotOffset: {x: -0.3, y: -0.2, z: 0}
-  muzzlePoint:
-    position: {x: 0.9, y: 0.63, z: 0}
-    rotation: {x: 0, y: 90, z: 0}
-  casingEjectionPoint:
-    position: {x: 0.3, y: 0.6, z: 0}
-    rotation: {x: 0, y: 75, z: 0}
-  laserOriginPoint:
-    position: {x: 0.33, y: 0.65, z: 0}
-    rotation: {x: 0, y: 90, z: 0}
-  suppressorOffset: {x: -0.05, y: -0.01, z: 0}
-  magSize: 35
-  reserveAmmo: 140
-  fireRate: 0.06
+  weaponType: 3
+  weaponPrefab: {fileID: 919132149155446097, guid: 6f369817827496042ae743aefe31dd8f, type: 3}
   damage: 18
+  fireRate: 0.06
   range: 60
-  bulletVelocity: 800
-  recoilX: 0.1
-  recoilY: 2
-  recoilSnapSpeed: 1
-  recoilReturnSpeed: 1
-  maxRecoilAccumulation: 1
-  weaponRecoilRotationMultiplier: 0.5
-  weaponRecoilPositionKick: 0.01
-  weaponRecoilReturnSpeed: 3
-  bulletSpreadAngle: 2.5
-  aimSpreadMultiplier: 0.5
-  weaponRotationAmount: 0.4
-  weaponRotationSpeed: 8
-  tracerColor: {r: 1, g: 0.8, b: 0.2, a: 1}
-  tracerBulbSize: 0.15
-  numberOfPellets: 1
-  pelletSpreadAngle: 10
-  spreadPattern: 0
-  standardSmokeEffect: {fileID: 7635179509782274007, guid: 42ed370cba5b73741ba685e017c9888f, type: 3}
-  suppressedSmokeEffect: {fileID: 0}
-  compensatorSmokeEffect: {fileID: 0}
-  hasLaserSight: 1
-  alignLaserToADS: 1
-  hasSuppressor: 1
-  suppressorModel: {fileID: 585465450973672901, guid: d4556d782d3f1d749877b7e14ca9304a, type: 3}
-  availableScopes:
-  - {fileID: 11400000, guid: 5c577ab165903a348a4ad54ccd81a609, type: 2}
-  defaultScopeIndex: 1
-  scopeMountName: ScopeMount
-  casingPrefab: {fileID: 8040417314040577264, guid: 1ee12a043b206e849aded86fa669894c, type: 3}
-  casingSize: 2
-  casingEjectionForce: 4
-  reloadDuration: 2.5
-  reloadPositionOffset: {x: 0, y: -0.15, z: -0.05}
-  reloadRotationOffset: {x: 75, y: 0, z: 0}
-  reloadAnimationCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  shootSound: {fileID: 0}
-  reloadSound: {fileID: 0}
-  suppressedShootSound: {fileID: 0}
-  adsPositionOffset: {x: 0, y: 0, z: -0.4}
+  accuracy: 1
+  magazineSize: 30
+  maxReserveAmmo: 120
+  reloadTime: 2
+  hipFirePosition:
+    position: {x: 0, y: -0.5, z: 0.2}
+    rotation: {x: 0, y: 0, z: 0}
+  adsPosition:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+  sprintPosition:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+  adsPositionOffset: {x: 0, y: 0, z: 0}
   adsSpeedOverride: 0
   adsFOVOverride: 0
   allowHoldBreath: 0
+  recoilAmount: 1
+  recoilPattern: {x: 2, y: 0.5}
   recoilPoints:
   - pointName: Barrel
+    transform: {fileID: 0}
     positionOffset: {x: 0.9, y: 0.63, z: 0}
     influence: 1
-    rotationMultiplier: {x: 1, y: 1, z: 1}
+    rotationInfluence: 1
+    positionInfluence: 1
+    rotationMultiplier: 1
     gizmoColor: {r: 1, g: 0, b: 0, a: 0}
   - pointName: Stock
+    transform: {fileID: 0}
     positionOffset: {x: 0, y: 0.6, z: 0}
     influence: 0.78
-    rotationMultiplier: {x: 1, y: 1, z: 1}
+    rotationInfluence: 1
+    positionInfluence: 1
+    rotationMultiplier: 1
     gizmoColor: {r: 0.03127098, g: 0, b: 1, a: 0}
   - pointName: Grip
+    transform: {fileID: 0}
     positionOffset: {x: 0.2, y: 0.43, z: 0}
     influence: 0.9
-    rotationMultiplier: {x: 1, y: 1, z: 1}
+    rotationInfluence: 1
+    positionInfluence: 1
+    rotationMultiplier: 1
     gizmoColor: {r: 0, g: 1, b: 0.010393381, a: 0}
+  pelletsPerShot: 1
+  spreadAngle: 10
+  spreadPattern: 0
+  availableScopes:
+  - {fileID: 11400000, guid: 5c577ab165903a348a4ad54ccd81a609, type: 2}
+  defaultScopeIndex: 0
+  fireSound: {fileID: 0}
+  reloadSound: {fileID: 0}
+  emptySound: {fileID: 0}
+  muzzleFlashPrefab: {fileID: 420945171483999286, guid: 9f937b65a79458f47a287a89c482e6e8, type: 3}
+  impactEffectPrefab: {fileID: 5962924905440704176, guid: 3995c8aebdd556a42abd2d5dac3fa514, type: 3}
+  tracerPrefab: {fileID: 2597169000448760246, guid: 4569abd6f9ab5b54cb91e0035cb997e4, type: 3}

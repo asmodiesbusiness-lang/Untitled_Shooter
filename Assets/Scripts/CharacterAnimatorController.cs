@@ -459,8 +459,7 @@ public class CharacterAnimatorController : MonoBehaviour
             // Y = Yaw (left/right) - controls horizontal spread
             // Z = Roll (kickback) - stock should have high Z for backward kick
             Vector3 baseRecoil = recoilRotation * recoilPoint.influence;
-            Vector3 pointRecoil = Vector3.Scale(baseRecoil, recoilPoint.rotationMultiplier);
-
+            Vector3 pointRecoil = baseRecoil * recoilPoint.rotationMultiplier;
             // Add to target rotation (accumulates like camera recoil)
             Vector3 newTarget = recoilPointTargetRotations[i] + pointRecoil;
 

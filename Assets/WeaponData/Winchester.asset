@@ -13,97 +13,55 @@ MonoBehaviour:
   m_Name: Winchester
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
   weaponName: Winchester
-  weaponType: 3
-  weaponModelPrefab: {fileID: 189543178970402249, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
-  handPreference: 0
-  weaponHolderPosition: {x: 0.025, y: -0.03, z: 0.2}
-  weaponHolderRotation: {x: 0, y: 90, z: 0}
-  pivotOffset: {x: 0, y: 0, z: 0}
-  muzzlePoint:
-    position: {x: 0, y: 0.3, z: 1.6}
-    rotation: {x: 0, y: 0, z: 0}
-  casingEjectionPoint:
-    position: {x: 0.2, y: 0.05, z: -0.1}
-    rotation: {x: 0, y: 0, z: 0}
-  laserOriginPoint:
-    position: {x: -0.01, y: 0.34, z: 1}
-    rotation: {x: 0, y: 0, z: 0}
-  suppressorOffset: {x: 0, y: 0, z: 0.05}
-  magSize: 10
-  reserveAmmo: 80
-  fireRate: 0.8
+  weaponType: 4
+  weaponPrefab: {fileID: 189543178970402249, guid: 54e2fb37c26eccd408b4fc5453f78119, type: 3}
   damage: 33
+  fireRate: 0.8
   range: 200
-  bulletVelocity: 1000
-  recoilX: 2
-  recoilY: 3
-  recoilSnapSpeed: 15
-  recoilReturnSpeed: 8
-  maxRecoilAccumulation: 5
-  weaponRecoilRotationMultiplier: 3
-  weaponRecoilPositionKick: 0.15
-  weaponRecoilReturnSpeed: 12
-  bulletSpreadAngle: 2
-  aimSpreadMultiplier: 0.3
-  weaponRotationAmount: 0.6
-  weaponRotationSpeed: 8
-  tracerColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  tracerBulbSize: 0.25
-  numberOfPellets: 1
-  pelletSpreadAngle: 10
-  spreadPattern: 1
-  standardSmokeEffect: {fileID: 7635179509782274007, guid: 42ed370cba5b73741ba685e017c9888f, type: 3}
-  suppressedSmokeEffect: {fileID: 0}
-  compensatorSmokeEffect: {fileID: 0}
-  hasLaserSight: 1
-  alignLaserToADS: 1
-  hasSuppressor: 0
-  suppressorModel: {fileID: 919132149155446097, guid: 774dd630a5a775945acc24b4895f71c5, type: 3}
-  casingPrefab: {fileID: 8040417314040577264, guid: 1ee12a043b206e849aded86fa669894c, type: 3}
-  casingSize: 1
-  casingEjectionForce: 5
-  reloadDuration: 1
-  reloadPositionOffset: {x: 0, y: -0.25, z: -0.15}
-  reloadRotationOffset: {x: 55, y: 0, z: -20}
-  reloadAnimationCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0.0041656494
-      value: 0.9928589
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 0.71910095
-      value: 0.0032081604
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  shootSound: {fileID: 0}
-  reloadSound: {fileID: 0}
-  suppressedShootSound: {fileID: 0}
+  accuracy: 1
+  magazineSize: 30
+  maxReserveAmmo: 120
+  reloadTime: 2
+  hipFirePosition:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+  adsPosition:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+  sprintPosition:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
   adsPositionOffset: {x: -0.075, y: 0.01, z: -0.65}
   adsSpeedOverride: 0
   adsFOVOverride: 50
   allowHoldBreath: 1
+  recoilAmount: 1
+  recoilPattern: {x: 2, y: 0.5}
   recoilPoints:
   - pointName: Barrel
+    transform: {fileID: 0}
     positionOffset: {x: 0, y: 0, z: 0.4}
     influence: 1
-    rotationMultiplier: {x: 5, y: 1, z: 0.6}
+    rotationInfluence: 1
+    positionInfluence: 1
+    rotationMultiplier: 1
     gizmoColor: {r: 1, g: 0, b: 0, a: 0}
   - pointName: Stock
+    transform: {fileID: 0}
     positionOffset: {x: 0, y: 0, z: -0.2}
     influence: 0.6
-    rotationMultiplier: {x: 2.2, y: 1, z: 5}
+    rotationInfluence: 1
+    positionInfluence: 1
+    rotationMultiplier: 1
     gizmoColor: {r: 0, g: 0.097765446, b: 1, a: 0}
+  pelletsPerShot: 1
+  spreadAngle: 10
+  spreadPattern: 0
+  availableScopes: []
+  defaultScopeIndex: 0
+  fireSound: {fileID: 0}
+  reloadSound: {fileID: 0}
+  emptySound: {fileID: 0}
+  muzzleFlashPrefab: {fileID: 0}
+  impactEffectPrefab: {fileID: 0}
+  tracerPrefab: {fileID: 0}
