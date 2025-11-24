@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b21d6eb798989364cb1efb652ee594cc, type: 3}
+  m_Name: GreenLaser
+  m_EditorClassIdentifier: Assembly-CSharp::LaserData
+  laserName: Red Laser
+  laserIcon: {fileID: 0}
+  laserColor: {r: 0.77254903, g: 1, b: 0, a: 1}
+  laserWidth: 0.002
+  dotSize: 0.02
+  maxDistance: 50
+  mountPosition: {x: 0, y: 1.7, z: 0.1}
+  mountRotation: {x: 0, y: 0, z: 0}
+  hasPointLight: 1
+  lightIntensity: 2
+  lightRange: 0.5
+  hipFireAccuracyBonus: 0.1
+  adsSpeedMultiplier: 0.98

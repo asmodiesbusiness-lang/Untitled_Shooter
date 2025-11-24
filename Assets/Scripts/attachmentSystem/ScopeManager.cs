@@ -73,6 +73,8 @@ public class ScopeManager : MonoBehaviour
         currentZoomLevel = currentScope.minZoomLevel;
         targetFOV = CalculateFOVForZoom(currentZoomLevel);
         targetCameraPosition = baseCameraPosition + currentScope.adsCameraPosition;
+
+        playerCamera.nearClipPlane = 0.15f;
     }
 
     void ExitADS()
@@ -81,6 +83,8 @@ public class ScopeManager : MonoBehaviour
         currentZoomLevel = 1f;
         targetFOV = baseFOV;
         targetCameraPosition = baseCameraPosition;
+
+        playerCamera.nearClipPlane = 0.01f;
     }
 
     float CalculateFOVForZoom(float zoomLevel)
@@ -126,17 +130,46 @@ public class ScopeManager : MonoBehaviour
     {
         if (currentScope == null) return;
 
-        playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, Time.deltaTime * currentScope.fovTransitionSpeed);
+        float currentFOV = playerCamera.fieldOfView;
+
+        // Already at target - don't do anything
+        if (Mathf.Approximately(currentFOV, targetFOV))
+            return;
+
+        float diff = Mathf.Abs(currentFOV - targetFOV);
+
+        // Snap to target when close enough to prevent flickering
+        if (diff < 0.5f)
+        {
+            playerCamera.fieldOfView = targetFOV;
+        }
+        else
+        {
+            playerCamera.fieldOfView = Mathf.Lerp(currentFOV, targetFOV, Time.deltaTime * currentScope.fovTransitionSpeed);
+        }
     }
 
     void UpdateCameraPosition()
     {
         if (currentScope == null) return;
 
-        playerCamera.transform.localPosition = Vector3.Lerp(
-            playerCamera.transform.localPosition,
-            targetCameraPosition,
-            Time.deltaTime * currentScope.adsTransitionSpeed);
+        Vector3 currentPos = playerCamera.transform.localPosition;
+
+        // Already at target - don't do anything
+        if (currentPos == targetCameraPosition)
+            return;
+
+        float dist = Vector3.Distance(currentPos, targetCameraPosition);
+
+        // Snap when close enough to prevent micro-oscillations
+        if (dist < 0.005f)
+        {
+            playerCamera.transform.localPosition = targetCameraPosition;
+        }
+        else
+        {
+            playerCamera.transform.localPosition = Vector3.Lerp(currentPos, targetCameraPosition, Time.deltaTime * currentScope.adsTransitionSpeed);
+        }
     }
 
     public void OnWeaponChanged(WeaponData newWeapon)

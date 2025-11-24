@@ -7,6 +7,7 @@ public class FPSCharacterController : MonoBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] private Transform weaponHolder;
     [SerializeField] private WeaponManager weaponManager;
+    [SerializeField] private CameraRecoil cameraRecoil; // NEW
 
     [Header("Look Settings")]
     [SerializeField] private float mouseSensitivity = 2f;
@@ -41,6 +42,12 @@ public class FPSCharacterController : MonoBehaviour
             {
                 Debug.LogError("FPSCharacterController: No camera assigned or found!");
             }
+        }
+
+        // Auto-find camera recoil
+        if (cameraRecoil == null && playerCamera != null)
+        {
+            cameraRecoil = playerCamera.GetComponent<CameraRecoil>();
         }
     }
 
@@ -85,6 +92,12 @@ public class FPSCharacterController : MonoBehaviour
 
         // Apply BOTH vertical look AND lean to camera in one rotation
         playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0f, currentLeanAngle);
+
+        // Update camera recoil system with current rotation
+        if (cameraRecoil != null)
+        {
+            cameraRecoil.UpdateRotation(verticalRotation, transform.eulerAngles.y);
+        }
     }
 
     void HandleWeaponInput()
@@ -129,5 +142,13 @@ public class FPSCharacterController : MonoBehaviour
                 currentWeapon.AddReserveAmmo(amount);
             }
         }
+    }
+
+    /// <summary>
+    /// Get the camera recoil component (for weapon to apply recoil)
+    /// </summary>
+    public CameraRecoil GetCameraRecoil()
+    {
+        return cameraRecoil;
     }
 }
