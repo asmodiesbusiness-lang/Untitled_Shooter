@@ -19,7 +19,7 @@ MonoBehaviour:
   dotSize: 0.01
   maxDistance: 50
   mountPosition: {x: 0, y: 0, z: 0.1}
-  mountRotation: {x: 0, y: 0, z: 0}
+  mountRotation: {x: 0, y: -0.2, z: 0}
   hasPointLight: 1
   lightIntensity: 2
   lightRange: 0.25

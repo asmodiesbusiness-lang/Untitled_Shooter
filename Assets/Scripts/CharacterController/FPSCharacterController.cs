@@ -3,18 +3,18 @@
 [RequireComponent(typeof(CharacterController))]
 public class FPSCharacterController : MonoBehaviour
 {
-    [Header("References")]
+    [Header("=== REFERENCES ===")]
     [SerializeField] private Camera playerCamera;
-    [SerializeField] private Transform weaponHolder;
     [SerializeField] private WeaponManager weaponManager;
-    [SerializeField] private CameraRecoil cameraRecoil; // NEW
+    [SerializeField] private CameraRecoil cameraRecoil;
+    [SerializeField] private CharacterAnimatorController animatorController;
 
-    [Header("Look Settings")]
+    [Header("=== LOOK SETTINGS ===")]
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private float verticalLookLimit = 80f;
 
-    [Header("Lean Settings")]
-    [SerializeField] private float leanAngle = 20f;
+    [Header("=== LEAN SETTINGS ===")]
+    [SerializeField] private float leanAngle = 15f;
     [SerializeField] private float leanSpeed = 10f;
 
     private float verticalRotation = 0f;
@@ -26,78 +26,59 @@ public class FPSCharacterController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        if (weaponManager == null)
-        {
-            weaponManager = GetComponentInChildren<WeaponManager>();
-            if (weaponManager == null)
-            {
-                Debug.LogError("FPSCharacterController: No WeaponManager found!");
-            }
-        }
-
         if (playerCamera == null)
-        {
             playerCamera = GetComponentInChildren<Camera>();
-            if (playerCamera == null)
-            {
-                Debug.LogError("FPSCharacterController: No camera assigned or found!");
-            }
-        }
 
-        // Auto-find camera recoil
+        if (weaponManager == null)
+            weaponManager = GetComponentInChildren<WeaponManager>();
+
         if (cameraRecoil == null && playerCamera != null)
-        {
             cameraRecoil = playerCamera.GetComponent<CameraRecoil>();
-        }
+
+        if (animatorController == null)
+            animatorController = GetComponent<CharacterAnimatorController>();
     }
 
     void Update()
     {
         HandleLook();
+        HandleLean();
         HandleWeaponInput();
     }
 
     void HandleLook()
     {
-        // Mouse input
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Rotate player body horizontally
+        // Horizontal rotation on player body
         transform.Rotate(Vector3.up * mouseX);
 
-        // Calculate vertical rotation
+        // Vertical rotation on camera
         verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, -verticalLookLimit, verticalLookLimit);
 
-        // Handle lean input
-        bool leanLeft = Input.GetKey(KeyCode.E);
-        bool leanRight = Input.GetKey(KeyCode.Q);
-
-        if (leanLeft && !leanRight)
-        {
-            targetLeanAngle = -leanAngle;
-        }
-        else if (leanRight && !leanLeft)
-        {
-            targetLeanAngle = leanAngle;
-        }
-        else
-        {
-            targetLeanAngle = 0f;
-        }
-
-        // Smoothly interpolate lean
-        currentLeanAngle = Mathf.Lerp(currentLeanAngle, targetLeanAngle, leanSpeed * Time.deltaTime);
-
-        // Apply BOTH vertical look AND lean to camera in one rotation
+        // Apply camera rotation (includes lean)
         playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0f, currentLeanAngle);
 
-        // Update camera recoil system with current rotation
+        // Update recoil system
         if (cameraRecoil != null)
-        {
             cameraRecoil.UpdateRotation(verticalRotation, transform.eulerAngles.y);
-        }
+    }
+
+    void HandleLean()
+    {
+        bool leanLeft = Input.GetKey(KeyCode.Q);
+        bool leanRight = Input.GetKey(KeyCode.E);
+
+        if (leanLeft && !leanRight)
+            targetLeanAngle = leanAngle;
+        else if (leanRight && !leanLeft)
+            targetLeanAngle = -leanAngle;
+        else
+            targetLeanAngle = 0f;
+
+        currentLeanAngle = Mathf.Lerp(currentLeanAngle, targetLeanAngle, leanSpeed * Time.deltaTime);
     }
 
     void HandleWeaponInput()
@@ -107,48 +88,33 @@ public class FPSCharacterController : MonoBehaviour
         WeaponController currentWeapon = weaponManager.GetCurrentWeapon();
         if (currentWeapon == null) return;
 
-        // Shooting
+        // Shoot
         if (Input.GetMouseButton(0))
-        {
             currentWeapon.TryShoot();
-        }
 
-        // Reloading
+        // Reload
         if (Input.GetKeyDown(KeyCode.R))
-        {
             currentWeapon.Reload();
-        }
     }
 
-    public Camera GetPlayerCamera()
-    {
-        return playerCamera;
-    }
+    // === PUBLIC API ===
+
+    public Camera GetPlayerCamera() => playerCamera;
+
+    public CameraRecoil GetCameraRecoil() => cameraRecoil;
 
     public bool IsAiming()
     {
-        // Query the CharacterAnimatorController for ADS state instead of tracking locally
-        CharacterAnimatorController animator = GetComponent<CharacterAnimatorController>();
-        return animator != null ? animator.IsAiming() : false;
+        return animatorController != null && animatorController.IsADS();
     }
 
     public void AddAmmo(int amount)
     {
         if (weaponManager != null)
         {
-            WeaponController currentWeapon = weaponManager.GetCurrentWeapon();
-            if (currentWeapon != null)
-            {
-                currentWeapon.AddReserveAmmo(amount);
-            }
+            WeaponController weapon = weaponManager.GetCurrentWeapon();
+            if (weapon != null)
+                weapon.AddReserveAmmo(amount);
         }
-    }
-
-    /// <summary>
-    /// Get the camera recoil component (for weapon to apply recoil)
-    /// </summary>
-    public CameraRecoil GetCameraRecoil()
-    {
-        return cameraRecoil;
     }
 }

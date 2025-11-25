@@ -29,22 +29,32 @@ public class WeaponData : ScriptableObject
     public float range = 100f;
     [Range(0f, 1f)] public float accuracy = 1f;
 
-    [Header("=== BALLISTICS ===")]
+    [Header("=== BALLISTICS (Simple Values) ===")]
     [Tooltip("Enable realistic bullet drop and travel")]
     public bool useBallisticPhysics = false;
 
-    [Tooltip("Bullet velocity in m/s (lower = more drop. SMG: 250-350, Rifle: 500-700, Sniper: 800+)")]
-    public float bulletVelocity = 300f;
+    [Tooltip("Bullet velocity in m/s (SMG: 250-350, Rifle: 500-700, Sniper: 800+)")]
+    public float muzzleVelocity = 400f;
 
-    [Tooltip("Gravity strength (higher = more drop. Earth: 9.81, Dramatic: 15-20)")]
-    public float bulletGravity = 15f;
+    [Tooltip("How far bullet travels perfectly straight before drop begins (meters)")]
+    public float straightFlightDistance = 50f;
 
-    [Tooltip("Number of curve segments (higher = more accurate, more expensive)")]
-    [Range(5, 50)]
-    public int trajectorySegments = 20;
+    [Tooltip("Bullet mass in kg - heavier = steeper arc after falloff (9mm: 0.008, 5.56: 0.004, .308: 0.010)")]
+    public float bulletMass = 0.008f;
 
-    [Tooltip("Damage falloff curve (X=distance 0-1, Y=damage multiplier 0-1)")]
-    public AnimationCurve damageFalloffCurve = AnimationCurve.Linear(0, 1, 1, 0.5f);
+    [Tooltip("Gravity multiplier - how quickly bullet falls (1.0 = realistic, 2.0 = dramatic drop)")]
+    public float bulletGravity = 1.5f;
+
+    [Tooltip("Damage at max range as percentage of base damage (0.0 - 1.0)")]
+    [Range(0f, 1f)]
+    public float minDamageMultiplier = 0.3f;
+
+    [Tooltip("Distance where damage starts falling off (meters)")]
+    public float damageDropoffStart = 30f;
+
+    [Tooltip("Number of simulation segments (higher = more accurate trajectory)")]
+    [Range(10, 100)]
+    public int trajectorySegments = 30;
 
     [Header("=== AMMO ===")]
     public int magazineSize = 30;
@@ -66,20 +76,13 @@ public class WeaponData : ScriptableObject
     [Tooltip("X = Vertical recoil (up/down), Y = Horizontal recoil (left/right)")]
     public Vector2 recoilPattern = new Vector2(3.0f, 0.3f);
 
-    [Tooltip("General recoil multiplier (deprecated, use recoilPattern instead)")]
+    [Tooltip("General recoil multiplier")]
     public float recoilAmount = 1f;
 
     [Header("=== CAMERA RECOIL ===")]
-    [Tooltip("How much camera rotates up per shot (degrees)")]
     public float cameraVerticalRecoil = 0.5f;
-
-    [Tooltip("Random horizontal camera push (degrees)")]
     public float cameraHorizontalRecoil = 0.3f;
-
-    [Tooltip("Random variance for camera horizontal")]
     public float cameraHorizontalVariance = 0.2f;
-
-    [Tooltip("How much resistance/drag when recovering (lower = more resistance, harder to pull down)")]
     [Range(0.5f, 10f)]
     public float recoilResistance = 2f;
 
@@ -109,16 +112,31 @@ public class WeaponData : ScriptableObject
 
     [Header("=== BARREL ATTACHMENTS ===")]
     public BarrelAttachment barrelAttachment = BarrelAttachment.None;
-
-    [Tooltip("Muzzle smoke effect (drag StandardMuzzleSmoke here)")]
     public GameObject muzzleSmokePrefab;
-
-    [Tooltip("Smoke particles per shot")]
     public int smokeParticlesPerShot = 3;
-
-    [Tooltip("Forward velocity multiplier based on attachment (Muzzle Brake = more)")]
     public float smokeVelocityMultiplier = 1f;
 
-    // === LASER SIGHT moved to AttachmentManager + LaserData ===
-    // Use AttachmentManager.equippedLaser instead
+    // === HELPER METHODS ===
+
+    public float CalculateDamageAtDistance(float distance)
+    {
+        if (distance <= damageDropoffStart)
+            return damage;
+
+        if (distance >= range)
+            return damage * minDamageMultiplier;
+
+        float falloffRange = range - damageDropoffStart;
+        float distanceIntoFalloff = distance - damageDropoffStart;
+        float falloffProgress = distanceIntoFalloff / falloffRange;
+
+        float multiplier = Mathf.Lerp(1f, minDamageMultiplier, falloffProgress);
+        return damage * multiplier;
+    }
+
+    public float GetEffectiveGravity()
+    {
+        float massInfluence = Mathf.Lerp(1.2f, 0.8f, bulletMass / 0.015f);
+        return 9.81f * bulletGravity * massInfluence;
+    }
 }

@@ -15,7 +15,6 @@ public class WeaponController : MonoBehaviour
     private ParticleSystem muzzleFlashEffect;
     private ParticleSystem muzzleSmokeEffect;
     private ParticleSystem casingEjectionEffect;
-    private LaserSight laserSight;
 
     void Awake()
     {
@@ -72,7 +71,7 @@ public class WeaponController : MonoBehaviour
     {
         if (weaponData == null) return;
 
-        // === MUZZLE FLASH SETUP ===
+        // === MUZZLE FLASH ===
         if (recoilSystem != null && recoilSystem.muzzlePoint != null && weaponData.muzzleFlashPrefab != null)
         {
             GameObject flashObj = Instantiate(weaponData.muzzleFlashPrefab, recoilSystem.muzzlePoint);
@@ -86,15 +85,10 @@ public class WeaponController : MonoBehaviour
                 main.playOnAwake = false;
                 main.loop = false;
                 muzzleFlashEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                Debug.Log("[WeaponController] Muzzle flash setup complete");
             }
         }
-        else
-        {
-            Debug.LogWarning("[WeaponController] Muzzle flash not setup - missing prefab or muzzle point");
-        }
 
-        // === MUZZLE SMOKE SETUP ===
+        // === MUZZLE SMOKE ===
         if (recoilSystem != null && recoilSystem.muzzlePoint != null && weaponData.muzzleSmokePrefab != null)
         {
             GameObject smokeObj = Instantiate(weaponData.muzzleSmokePrefab, recoilSystem.muzzlePoint);
@@ -107,24 +101,15 @@ public class WeaponController : MonoBehaviour
                 var main = muzzleSmokeEffect.main;
                 main.playOnAwake = false;
                 main.loop = false;
-
-                // Just use the smoke as-is from the prefab
-                // Don't modify velocity curves - they're already set up correctly
-
                 muzzleSmokeEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                Debug.Log($"[WeaponController] Muzzle smoke setup complete (Attachment: {weaponData.barrelAttachment})");
             }
         }
 
-        // === LASER SIGHT SETUP ===
-        // Handled by AttachmentManager now - removed from here
-
-        // === CASING EJECTION SETUP ===
+        // === CASING EJECTION ===
         Transform casingPoint = transform.Find("CasingEjectionPoint");
         if (casingPoint == null)
             casingPoint = transform.Find("CasingEjection");
 
-        // Try recursive search if not found
         if (casingPoint == null)
         {
             foreach (Transform child in GetComponentsInChildren<Transform>(true))
@@ -145,36 +130,7 @@ public class WeaponController : MonoBehaviour
             casingEjectionEffect = casingObj.GetComponent<ParticleSystem>();
 
             if (casingEjectionEffect != null)
-            {
                 casingEjectionEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                Debug.Log("[WeaponController] Casing ejection setup complete at: " + casingPoint.name);
-            }
-            else
-            {
-                Debug.LogWarning("[WeaponController] Casing prefab has no ParticleSystem component!");
-            }
-        }
-        else
-        {
-            if (casingPoint == null)
-                Debug.LogWarning("[WeaponController] No CasingEjectionPoint found on weapon! Searched entire hierarchy.");
-            if (weaponData.casingPrefab == null)
-                Debug.LogWarning("[WeaponController] No casing prefab assigned in WeaponData!");
-        }
-    }
-
-    float GetSmokeVelocityMultiplier()
-    {
-        switch (weaponData.barrelAttachment)
-        {
-            case WeaponData.BarrelAttachment.Suppressor:
-                return 0.3f; // Very little smoke
-            case WeaponData.BarrelAttachment.FlashHider:
-                return 0.7f; // Some smoke
-            case WeaponData.BarrelAttachment.MuzzleBrake:
-                return 1.5f; // Lots of smoke, more velocity
-            default:
-                return 1f; // Normal
         }
     }
 
@@ -192,11 +148,11 @@ public class WeaponController : MonoBehaviour
         EjectCasing();
         PlayFireSound();
 
-        // Apply weapon visual recoil
+        // Weapon visual recoil
         if (recoilSystem != null)
             recoilSystem.ApplyRecoil(weaponData.recoilPattern);
 
-        // Apply camera recoil with weapon-specific values
+        // Camera recoil
         FPSCharacterController fpsController = FindFirstObjectByType<FPSCharacterController>();
         if (fpsController != null && fpsController.GetCameraRecoil() != null)
         {
@@ -204,7 +160,7 @@ public class WeaponController : MonoBehaviour
                 weaponData.cameraVerticalRecoil,
                 weaponData.cameraHorizontalRecoil,
                 weaponData.cameraHorizontalVariance,
-                weaponData.recoilResistance // Pass weapon's resistance value
+                weaponData.recoilResistance
             );
         }
 
@@ -219,12 +175,11 @@ public class WeaponController : MonoBehaviour
 
     void FireSingleRound()
     {
-        Vector3 raycastOrigin = recoilSystem != null ? recoilSystem.GetMuzzlePosition() : transform.position;
-        Vector3 shootDirection = recoilSystem != null ? recoilSystem.GetMuzzleDirection() : transform.forward;
+        Vector3 muzzlePos = recoilSystem != null ? recoilSystem.GetMuzzlePosition() : transform.position;
+        Vector3 shootDir = recoilSystem != null ? recoilSystem.GetMuzzleDirection() : transform.forward;
 
-        // Apply weapon spread
         float spread = (1f - weaponData.accuracy) * 5f;
-        shootDirection = ApplySpread(shootDirection, spread);
+        shootDir = ApplySpread(shootDir, spread);
 
         int layerMask = ~LayerMask.GetMask("Player");
 
@@ -233,16 +188,13 @@ public class WeaponController : MonoBehaviour
         bool didHit = false;
         Vector3[] pathPoints = null;
 
-        // Use ballistic physics if enabled
         if (weaponData.useBallisticPhysics)
         {
-            didHit = BallisticTrajectory.FireBallisticRay(
-                raycastOrigin,
-                shootDirection,
-                weaponData.bulletVelocity,
-                weaponData.bulletGravity,
-                weaponData.range,
-                weaponData.trajectorySegments,
+            // === NEW SIMPLE BALLISTICS ===
+            didHit = BulletPhysics.FireBullet(
+                muzzlePos,
+                shootDir,
+                weaponData,
                 layerMask,
                 out hit,
                 out pathPoints
@@ -251,33 +203,20 @@ public class WeaponController : MonoBehaviour
             if (didHit)
             {
                 hitPoint = hit.point;
-                float distance = Vector3.Distance(raycastOrigin, hitPoint);
+                float distance = Vector3.Distance(muzzlePos, hitPoint);
+                float actualDamage = BulletPhysics.CalculateDamage(weaponData, distance);
 
-                // Apply damage falloff
-                float finalDamage = BallisticTrajectory.CalculateDamageFalloff(
-                    distance,
-                    weaponData.damageFalloffCurve,
-                    weaponData.damage
-                );
-
-                Debug.Log($"[BALLISTIC HIT] Target: {hit.collider.name} | Distance: {distance:F1}m | Damage: {finalDamage:F1}/{weaponData.damage} | Hit Point: {hitPoint}");
                 SpawnImpactEffect(hit);
+                Debug.Log($"[BALLISTIC HIT] {hit.collider.name} at {distance:F1}m | Damage: {actualDamage:F1}");
             }
             else
             {
-                if (pathPoints != null && pathPoints.Length > 0)
-                {
-                    hitPoint = pathPoints[pathPoints.Length - 1];
-                    Debug.Log($"[BALLISTIC MISS] End point: {hitPoint} | Path segments: {pathPoints.Length}");
-                }
-                else
-                {
-                    hitPoint = raycastOrigin + shootDirection * weaponData.range;
-                    Debug.LogWarning("[BALLISTIC ERROR] No path points generated!");
-                }
+                hitPoint = pathPoints != null && pathPoints.Length > 0
+                    ? pathPoints[pathPoints.Length - 1]
+                    : muzzlePos + shootDir * weaponData.range;
             }
 
-            // Draw ballistic path for debugging
+            // Debug draw trajectory
             if (pathPoints != null && pathPoints.Length > 1)
             {
                 for (int i = 0; i < pathPoints.Length - 1; i++)
@@ -289,82 +228,66 @@ public class WeaponController : MonoBehaviour
         else
         {
             // Standard straight raycast
-            if (Physics.Raycast(raycastOrigin, shootDirection, out hit, weaponData.range, layerMask))
+            if (Physics.Raycast(muzzlePos, shootDir, out hit, weaponData.range, layerMask))
             {
                 hitPoint = hit.point;
                 didHit = true;
-                Debug.DrawLine(raycastOrigin, hit.point, Color.red, 0.5f);
+                Debug.DrawLine(muzzlePos, hit.point, Color.red, 0.5f);
                 SpawnImpactEffect(hit);
             }
             else
             {
-                hitPoint = raycastOrigin + shootDirection * weaponData.range;
-                Debug.DrawLine(raycastOrigin, hitPoint, Color.yellow, 0.5f);
+                hitPoint = muzzlePos + shootDir * weaponData.range;
+                Debug.DrawLine(muzzlePos, hitPoint, Color.yellow, 0.5f);
             }
         }
 
         // Spawn tracer
         if (weaponData.tracerPrefab != null)
         {
-            if (weaponData.useBallisticPhysics && pathPoints != null)
-            {
+            if (weaponData.useBallisticPhysics && pathPoints != null && pathPoints.Length > 1)
                 SpawnBallisticTracer(pathPoints);
-            }
             else
-            {
-                SpawnTracer(raycastOrigin, hitPoint);
-            }
+                SpawnTracer(muzzlePos, hitPoint);
         }
     }
 
     void SpawnBallisticTracer(Vector3[] pathPoints)
     {
-        // Create tracer that follows ballistic path
         GameObject tracer = Instantiate(weaponData.tracerPrefab);
         tracer.transform.position = pathPoints[0];
-
         StartCoroutine(AnimateBallisticTracer(tracer, pathPoints));
     }
 
     System.Collections.IEnumerator AnimateBallisticTracer(GameObject tracer, Vector3[] pathPoints)
     {
-        float duration = 0.1f; // Total travel time
+        float duration = 0.15f;
         float elapsed = 0f;
-        int currentSegment = 0;
 
-        while (elapsed < duration && currentSegment < pathPoints.Length - 1)
+        while (elapsed < duration && tracer != null)
         {
             elapsed += Time.deltaTime;
-            float totalProgress = elapsed / duration;
-            int targetSegment = Mathf.FloorToInt(totalProgress * (pathPoints.Length - 1));
+            float progress = elapsed / duration;
 
-            // Move through segments
-            while (currentSegment < targetSegment && currentSegment < pathPoints.Length - 1)
-            {
-                currentSegment++;
-            }
+            float pathProgress = progress * (pathPoints.Length - 1);
+            int segmentIndex = Mathf.Clamp(Mathf.FloorToInt(pathProgress), 0, pathPoints.Length - 2);
+            float segmentProgress = pathProgress - segmentIndex;
 
-            // Interpolate within current segment
-            if (currentSegment < pathPoints.Length - 1)
-            {
-                float segmentProgress = (totalProgress * (pathPoints.Length - 1)) - currentSegment;
-                tracer.transform.position = Vector3.Lerp(
-                    pathPoints[currentSegment],
-                    pathPoints[currentSegment + 1],
-                    segmentProgress
-                );
+            tracer.transform.position = Vector3.Lerp(
+                pathPoints[segmentIndex],
+                pathPoints[segmentIndex + 1],
+                segmentProgress
+            );
 
-                Vector3 direction = (pathPoints[currentSegment + 1] - pathPoints[currentSegment]).normalized;
-                if (direction != Vector3.zero)
-                {
-                    tracer.transform.rotation = Quaternion.LookRotation(direction);
-                }
-            }
+            Vector3 direction = (pathPoints[segmentIndex + 1] - pathPoints[segmentIndex]).normalized;
+            if (direction != Vector3.zero)
+                tracer.transform.rotation = Quaternion.LookRotation(direction);
 
             yield return null;
         }
 
-        Destroy(tracer, 0.5f);
+        if (tracer != null)
+            Destroy(tracer, 0.3f);
     }
 
     void SpawnTracer(Vector3 start, Vector3 end)
@@ -372,48 +295,45 @@ public class WeaponController : MonoBehaviour
         GameObject tracer = Instantiate(weaponData.tracerPrefab);
         tracer.transform.position = start;
         tracer.transform.LookAt(end);
-
-        // Animate tracer movement
         StartCoroutine(AnimateTracer(tracer, start, end));
     }
 
     System.Collections.IEnumerator AnimateTracer(GameObject tracer, Vector3 start, Vector3 end)
     {
-        float duration = 0.1f; // Tracer travel time
+        float duration = 0.1f;
         float elapsed = 0f;
 
-        while (elapsed < duration)
+        while (elapsed < duration && tracer != null)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            tracer.transform.position = Vector3.Lerp(start, end, t);
+            tracer.transform.position = Vector3.Lerp(start, end, elapsed / duration);
             yield return null;
         }
 
-        Destroy(tracer, 0.5f); // Let particle effects finish
+        if (tracer != null)
+            Destroy(tracer, 0.3f);
     }
 
     void FireShotgunPellets()
     {
-        Vector3 raycastOrigin = recoilSystem != null ? recoilSystem.GetMuzzlePosition() : transform.position;
-        Vector3 baseDirection = recoilSystem != null ? recoilSystem.GetMuzzleDirection() : transform.forward;
+        Vector3 muzzlePos = recoilSystem != null ? recoilSystem.GetMuzzlePosition() : transform.position;
+        Vector3 baseDir = recoilSystem != null ? recoilSystem.GetMuzzleDirection() : transform.forward;
 
         int layerMask = ~LayerMask.GetMask("Player");
 
         for (int i = 0; i < weaponData.pelletsPerShot; i++)
         {
-            Vector3 direction = ApplySpread(baseDirection, weaponData.spreadAngle);
+            Vector3 direction = ApplySpread(baseDir, weaponData.spreadAngle);
 
             RaycastHit hit;
-            if (Physics.Raycast(raycastOrigin, direction, out hit, weaponData.range, layerMask))
+            if (Physics.Raycast(muzzlePos, direction, out hit, weaponData.range, layerMask))
             {
-                Debug.DrawLine(raycastOrigin, hit.point, Color.red, 0.5f);
+                Debug.DrawLine(muzzlePos, hit.point, Color.red, 0.5f);
                 SpawnImpactEffect(hit);
             }
             else
             {
-                Vector3 endPoint = raycastOrigin + direction * weaponData.range;
-                Debug.DrawLine(raycastOrigin, endPoint, Color.yellow, 0.5f);
+                Debug.DrawLine(muzzlePos, muzzlePos + direction * weaponData.range, Color.yellow, 0.5f);
             }
         }
     }
@@ -428,14 +348,10 @@ public class WeaponController : MonoBehaviour
     void PlayMuzzleFlash()
     {
         if (muzzleFlashEffect != null)
-        {
             muzzleFlashEffect.Play();
-        }
 
         if (muzzleSmokeEffect != null)
-        {
             muzzleSmokeEffect.Emit(weaponData.smokeParticlesPerShot);
-        }
     }
 
     void EjectCasing()
@@ -454,10 +370,16 @@ public class WeaponController : MonoBehaviour
     {
         if (weaponData.impactEffectPrefab != null)
         {
-            GameObject impact = Instantiate(weaponData.impactEffectPrefab, hit.point + hit.normal * 0.01f, Quaternion.LookRotation(hit.normal));
+            GameObject impact = Instantiate(
+                weaponData.impactEffectPrefab,
+                hit.point + hit.normal * 0.01f,
+                Quaternion.LookRotation(hit.normal)
+            );
             Destroy(impact, 2f);
         }
     }
+
+    // === PUBLIC API ===
 
     public bool TryShoot()
     {

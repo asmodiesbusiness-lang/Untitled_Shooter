@@ -68,6 +68,9 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 slideDirection;
     private float lastSlideTime;
 
+    // Sprint state
+    private bool isSprinting;
+
     [Header("=== WEAPON SNAP ===")]
     [SerializeField] private bool enableWeaponSnap = true;
     [SerializeField] private float maxRotationX = 45f;
@@ -238,31 +241,29 @@ public class PlayerMovement : MonoBehaviour
             weaponHolder.localRotation = Quaternion.Euler(clampedEuler);
         }
 
-        float positionDistance = Vector3.Distance(weaponHolder.localPosition, weaponOriginalPosition);
-        if (positionDistance > positionTolerance)
+        Vector3 positionDiff = weaponHolder.localPosition - weaponOriginalPosition;
+        if (positionDiff.magnitude > positionTolerance)
         {
-            Vector3 direction = (weaponHolder.localPosition - weaponOriginalPosition).normalized;
-            weaponHolder.localPosition = weaponOriginalPosition + direction * positionTolerance;
+            Vector3 clampedPosition = weaponOriginalPosition + Vector3.ClampMagnitude(positionDiff, positionTolerance);
+            weaponHolder.localPosition = clampedPosition;
         }
     }
 
-    float ClampAngle(float current, float min, float max)
+    float ClampAngle(float angle, float min, float max)
     {
-        current = NormalizeAngle(current);
+        if (angle < -180f) angle += 360f;
+        if (angle > 180f) angle -= 360f;
+
         min = NormalizeAngle(min);
         max = NormalizeAngle(max);
 
         if (min > max)
         {
-            if (current > min || current < max)
-                return current;
-
-            float distToMin = Mathf.Abs(Mathf.DeltaAngle(current, min));
-            float distToMax = Mathf.Abs(Mathf.DeltaAngle(current, max));
-            return distToMin < distToMax ? min : max;
+            if (angle >= min || angle <= max) return angle;
+            return Mathf.Abs(Mathf.DeltaAngle(angle, min)) < Mathf.Abs(Mathf.DeltaAngle(angle, max)) ? min : max;
         }
 
-        return Mathf.Clamp(current, min, max);
+        return Mathf.Clamp(angle, min, max);
     }
 
     float NormalizeAngle(float angle)
@@ -406,14 +407,18 @@ public class PlayerMovement : MonoBehaviour
     void HandleMovement()
     {
         if (!enableWalking || isSliding || isDiving)
+        {
+            isSprinting = false;
             return;
+        }
 
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
-        bool sprint = enableSprinting && Input.GetKey(KeyCode.LeftShift) && v > 0 && currentStance == Stance.Standing;
+        // Update sprint state
+        isSprinting = enableSprinting && Input.GetKey(KeyCode.LeftShift) && v > 0 && currentStance == Stance.Standing && isGrounded;
 
-        float speed = sprint ? sprintSpeed : currentSpeed;
+        float speed = isSprinting ? sprintSpeed : currentSpeed;
         Vector3 move = transform.right * h + transform.forward * v;
         float mult = isGrounded ? 1f : airControlMultiplier;
 
@@ -455,6 +460,7 @@ public class PlayerMovement : MonoBehaviour
 
         GUILayout.Label("Stance: " + currentStance);
         GUILayout.Label("Grounded: " + (isGrounded ? "YES" : "NO"));
+        GUILayout.Label("Sprinting: " + (isSprinting ? "YES" : "NO"));
         GUILayout.Label("Speed: " + currentSpeed.ToString("F1") + " m/s");
 
         if (scopeManager != null)
@@ -471,19 +477,18 @@ public class PlayerMovement : MonoBehaviour
         GUILayout.EndArea();
     }
 
+    // === PUBLIC API ===
     public bool IsSliding() => isSliding;
     public bool IsDiving() => isDiving;
     public bool IsProne() => currentStance == Stance.Prone;
     public bool IsGrounded() => isGrounded;
+    public bool IsSprinting() => isSprinting;
     public bool isCrouching => currentStance == Stance.Crouching;
 
-    // New methods required by CharacterAnimatorController
     public float GetCurrentSpeed()
     {
-        // Return the actual movement speed of the character
         if (controller != null)
         {
-            // Calculate horizontal speed (ignoring Y velocity)
             Vector3 horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
             return horizontalVelocity.magnitude;
         }
@@ -492,8 +497,6 @@ public class PlayerMovement : MonoBehaviour
 
     public bool IsRolling()
     {
-        // Rolling is essentially the same as diving in this implementation
-        // You can customize this logic if you want rolling to be different from diving
         return isDiving;
     }
 

@@ -6,20 +6,15 @@ public class DualPointRecoil : MonoBehaviour
     [Tooltip("How much gun pitches UP per shot (degrees)")]
     [SerializeField] private float verticalRecoil = 2.5f;
 
-    [Tooltip("How much gun rolls LEFT/RIGHT per shot (degrees)")]
+    [Tooltip("Random horizontal YAW per shot (degrees)")]
     [SerializeField] private float horizontalRecoil = 0.8f;
 
-    [Tooltip("Random variance for horizontal roll")]
+    [Tooltip("Random variance for horizontal")]
     [SerializeField] private float horizontalVariance = 0.5f;
 
     [Header("=== KICKBACK (Position) ===")]
-    [Tooltip("How far gun kicks back (Z axis)")]
     [SerializeField] private float kickbackDistance = 0.05f;
-
-    [Tooltip("How fast gun snaps back (higher = more snappy)")]
     [SerializeField] private float kickbackSpeed = 30f;
-
-    [Tooltip("How fast gun returns forward (higher = more snappy)")]
     [SerializeField] private float kickbackReturnSpeed = 20f;
 
     [Header("=== RECOVERY ===")]
@@ -27,7 +22,6 @@ public class DualPointRecoil : MonoBehaviour
     [SerializeField] private float recoverySpeed = 5f;
 
     [Header("=== MUZZLE POINT ===")]
-    [Tooltip("Where bullets come from - auto-found if empty")]
     public Transform muzzlePoint;
 
     // Rotation state
@@ -42,7 +36,6 @@ public class DualPointRecoil : MonoBehaviour
 
     void Start()
     {
-        // Auto-find muzzle point
         if (muzzlePoint == null)
         {
             muzzlePoint = transform.Find("MuzzlePoint");
@@ -50,7 +43,6 @@ public class DualPointRecoil : MonoBehaviour
                 Debug.LogWarning("[DualPointRecoil] No MuzzlePoint found!");
         }
 
-        // Store original position
         originalPosition = transform.localPosition;
         currentPosition = originalPosition;
         targetPosition = originalPosition;
@@ -58,90 +50,68 @@ public class DualPointRecoil : MonoBehaviour
 
     void Update()
     {
-        // Rotation recoil (smooth)
+        // Rotation recoil
         currentRotation = Vector3.Lerp(currentRotation, targetRotation, Time.deltaTime * recoilSpeed);
         targetRotation = Vector3.Lerp(targetRotation, Vector3.zero, Time.deltaTime * recoverySpeed);
         transform.localRotation = Quaternion.Euler(currentRotation);
 
-        // Kickback position (SNAPPY)
+        // Kickback position
         if (isKickingBack)
         {
-            // Snap back FAST
             currentPosition = Vector3.Lerp(currentPosition, targetPosition, Time.deltaTime * kickbackSpeed);
 
-            // Check if we've reached the back position
             if (Vector3.Distance(currentPosition, targetPosition) < 0.001f)
             {
                 isKickingBack = false;
-                targetPosition = originalPosition; // Start returning
+                targetPosition = originalPosition;
             }
         }
         else
         {
-            // Snap forward FAST
             currentPosition = Vector3.Lerp(currentPosition, originalPosition, Time.deltaTime * kickbackReturnSpeed);
         }
 
         transform.localPosition = currentPosition;
     }
 
-    /// <summary>
-    /// Apply recoil - gun pitches up, rolls randomly, and kicks back
-    /// </summary>
     public void ApplyRecoil(float multiplier = 1f)
     {
-        // PITCH UP (X rotation = looking up)
+        // PITCH UP (negative X = look up in Unity)
         targetRotation.x -= verticalRecoil * multiplier;
 
-        // ROLL left/right (Z rotation = tilt)
-        float randomRoll = Random.Range(-horizontalVariance, horizontalVariance);
-        targetRotation.z += (horizontalRecoil + randomRoll) * multiplier;
+        // YAW left/right (Y rotation)
+        float randomYaw = Random.Range(-horizontalVariance, horizontalVariance);
+        targetRotation.y += (horizontalRecoil + randomYaw) * multiplier * (Random.value > 0.5f ? 1f : -1f);
 
-        // KICKBACK (snap back on Z axis)
+        // KICKBACK
         targetPosition = originalPosition + new Vector3(0, 0, -kickbackDistance * multiplier);
         isKickingBack = true;
     }
 
-    /// <summary>
-    /// Apply recoil with pattern (x = vertical, y = horizontal)
-    /// </summary>
     public void ApplyRecoil(Vector2 recoilPattern)
     {
-        // Vertical = pitch up
+        // X = vertical (pitch up)
         targetRotation.x -= recoilPattern.x;
 
-        // Horizontal = roll with randomness
-        float randomRoll = Random.Range(-horizontalVariance, horizontalVariance);
-        targetRotation.z += (recoilPattern.y + randomRoll);
+        // Y = horizontal (yaw)
+        float randomYaw = Random.Range(-horizontalVariance, horizontalVariance);
+        targetRotation.y += (recoilPattern.y + randomYaw) * (Random.value > 0.5f ? 1f : -1f);
 
         // Kickback
         targetPosition = originalPosition + new Vector3(0, 0, -kickbackDistance);
         isKickingBack = true;
     }
 
-    /// <summary>
-    /// Get the direction bullets should fire (accounts for recoil)
-    /// </summary>
     public Vector3 GetMuzzleDirection()
     {
-        if (muzzlePoint != null)
-            return muzzlePoint.forward;
-        return transform.forward;
+        return muzzlePoint != null ? muzzlePoint.forward : transform.forward;
     }
 
-    /// <summary>
-    /// Get muzzle position for bullet spawn
-    /// </summary>
     public Vector3 GetMuzzlePosition()
     {
-        if (muzzlePoint != null)
-            return muzzlePoint.position;
-        return transform.position;
+        return muzzlePoint != null ? muzzlePoint.position : transform.position;
     }
 
-    /// <summary>
-    /// Reset recoil instantly
-    /// </summary>
     public void ResetRecoil()
     {
         currentRotation = Vector3.zero;
@@ -154,23 +124,14 @@ public class DualPointRecoil : MonoBehaviour
         isKickingBack = false;
     }
 
-    /// <summary>
-    /// Check if gun is currently recoiling
-    /// </summary>
-    public bool IsRecoiling()
-    {
-        return currentRotation.magnitude > 0.1f || isKickingBack;
-    }
+    public bool IsRecoiling() => currentRotation.magnitude > 0.1f || isKickingBack;
 
     void OnDrawGizmosSelected()
     {
         if (muzzlePoint != null)
         {
-            // Draw muzzle point
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(muzzlePoint.position, 0.02f);
-
-            // Draw firing direction
             Gizmos.color = Color.red;
             Gizmos.DrawRay(muzzlePoint.position, muzzlePoint.forward * 0.5f);
         }

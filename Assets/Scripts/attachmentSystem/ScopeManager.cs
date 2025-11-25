@@ -26,7 +26,7 @@ public class ScopeManager : MonoBehaviour
     private Vector3 targetCameraPosition;
 
     [Header("=== DEBUG ===")]
-    [SerializeField] private bool showDebugInfo = false;
+    [SerializeField] private bool showDebugUI = true;
 
     void Start()
     {
@@ -34,7 +34,7 @@ public class ScopeManager : MonoBehaviour
             playerCamera = Camera.main;
 
         if (weaponManager == null)
-            weaponManager = GetComponent<WeaponManager>();
+            weaponManager = FindFirstObjectByType<WeaponManager>();
 
         baseFOV = playerCamera.fieldOfView;
         targetFOV = baseFOV;
@@ -45,19 +45,14 @@ public class ScopeManager : MonoBehaviour
     void Update()
     {
         HandleInput();
+        HandleScrollZoom();
         UpdateFOV();
         UpdateCameraPosition();
     }
 
-    void OnGUI()
-    {
-        if (showDebugInfo)
-            DrawDebugInfo();
-    }
-
     void HandleInput()
     {
-        bool adsInput = Input.GetButton("Fire2") || Input.GetKey(adsKey);
+        bool adsInput = Input.GetKey(adsKey);
 
         if (adsInput && !isADS)
             EnterADS();
@@ -65,16 +60,36 @@ public class ScopeManager : MonoBehaviour
             ExitADS();
     }
 
+    void HandleScrollZoom()
+    {
+        if (!isADS || currentScope == null || !currentScope.allowScrollZoom)
+            return;
+
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        if (Mathf.Abs(scroll) > 0.01f)
+        {
+            currentZoomLevel += scroll > 0 ? currentScope.zoomStepSize : -currentScope.zoomStepSize;
+            currentZoomLevel = Mathf.Clamp(currentZoomLevel, currentScope.minZoomLevel, currentScope.maxZoomLevel);
+            targetFOV = CalculateFOVForZoom(currentZoomLevel);
+        }
+    }
+
     void EnterADS()
     {
-        if (currentScope == null) return;
-
         isADS = true;
-        currentZoomLevel = currentScope.minZoomLevel;
-        targetFOV = CalculateFOVForZoom(currentZoomLevel);
-        targetCameraPosition = baseCameraPosition + currentScope.adsCameraPosition;
 
-        playerCamera.nearClipPlane = 0.15f;
+        if (currentScope != null)
+        {
+            currentZoomLevel = currentScope.minZoomLevel;
+            targetFOV = CalculateFOVForZoom(currentZoomLevel);
+            targetCameraPosition = baseCameraPosition + currentScope.adsCameraPosition;
+        }
+        else
+        {
+            // No scope - use default ADS
+            targetFOV = baseFOV * 0.85f;
+            targetCameraPosition = baseCameraPosition;
+        }
     }
 
     void ExitADS()
@@ -83,8 +98,6 @@ public class ScopeManager : MonoBehaviour
         currentZoomLevel = 1f;
         targetFOV = baseFOV;
         targetCameraPosition = baseCameraPosition;
-
-        playerCamera.nearClipPlane = 0.01f;
     }
 
     float CalculateFOVForZoom(float zoomLevel)
@@ -128,47 +141,31 @@ public class ScopeManager : MonoBehaviour
 
     void UpdateFOV()
     {
-        if (currentScope == null) return;
-
         float currentFOV = playerCamera.fieldOfView;
 
-        // Already at target - don't do anything
-        if (Mathf.Approximately(currentFOV, targetFOV))
-            return;
-
-        float diff = Mathf.Abs(currentFOV - targetFOV);
-
-        // Snap to target when close enough to prevent flickering
-        if (diff < 0.5f)
+        if (Mathf.Abs(currentFOV - targetFOV) < 0.5f)
         {
             playerCamera.fieldOfView = targetFOV;
         }
         else
         {
-            playerCamera.fieldOfView = Mathf.Lerp(currentFOV, targetFOV, Time.deltaTime * currentScope.fovTransitionSpeed);
+            float speed = currentScope != null ? currentScope.fovTransitionSpeed : 10f;
+            playerCamera.fieldOfView = Mathf.Lerp(currentFOV, targetFOV, Time.deltaTime * speed);
         }
     }
 
     void UpdateCameraPosition()
     {
-        if (currentScope == null) return;
-
         Vector3 currentPos = playerCamera.transform.localPosition;
 
-        // Already at target - don't do anything
-        if (currentPos == targetCameraPosition)
-            return;
-
-        float dist = Vector3.Distance(currentPos, targetCameraPosition);
-
-        // Snap when close enough to prevent micro-oscillations
-        if (dist < 0.005f)
+        if (Vector3.Distance(currentPos, targetCameraPosition) < 0.005f)
         {
             playerCamera.transform.localPosition = targetCameraPosition;
         }
         else
         {
-            playerCamera.transform.localPosition = Vector3.Lerp(currentPos, targetCameraPosition, Time.deltaTime * currentScope.adsTransitionSpeed);
+            float speed = currentScope != null ? currentScope.adsTransitionSpeed : 8f;
+            playerCamera.transform.localPosition = Vector3.Lerp(currentPos, targetCameraPosition, Time.deltaTime * speed);
         }
     }
 
@@ -199,23 +196,67 @@ public class ScopeManager : MonoBehaviour
             SpawnScopeModel();
     }
 
-    void DrawDebugInfo()
+    // === DEBUG UI ===
+    void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(10, Screen.height - 150, 300, 140));
-        GUILayout.Box("=== SCOPE DEBUG INFO ===");
+        if (!showDebugUI) return;
 
-        if (currentScope != null)
-            GUILayout.Label("Scope: " + currentScope.scopeName);
-        else
-            GUILayout.Label("Scope: None");
+        // Get weapon info
+        string weaponName = "None";
+        int currentAmmo = 0;
+        int reserveAmmo = 0;
+        int magSize = 1;
+        int magCount = 0;
 
-        GUILayout.Label("FOV: " + playerCamera.fieldOfView.ToString("F1"));
-        GUILayout.Label("ADS: " + (isADS ? "YES" : "NO"));
-        GUILayout.Label("Mount Point: " + (scopeMountPoint != null ? "Assigned" : "NOT ASSIGNED"));
+        if (weaponManager != null)
+        {
+            WeaponController wc = weaponManager.GetCurrentWeapon();
+            if (wc != null)
+            {
+                WeaponData wd = wc.GetWeaponData();
+                if (wd != null)
+                {
+                    weaponName = wd.weaponName;
+                    magSize = wd.magazineSize;
+                }
+                currentAmmo = wc.GetCurrentAmmo();
+                reserveAmmo = wc.GetReserveAmmo();
+                magCount = magSize > 0 ? reserveAmmo / magSize : 0;
+            }
+        }
+
+        GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
+        GUIStyle headerStyle = new GUIStyle(GUI.skin.label);
+        headerStyle.fontStyle = FontStyle.Bold;
+        headerStyle.normal.textColor = Color.cyan;
+
+        GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
+        labelStyle.fontSize = 12;
+
+        // Main debug panel
+        GUI.Box(new Rect(10, 10, 250, 220), "");
+        GUILayout.BeginArea(new Rect(15, 15, 240, 210));
+
+        GUILayout.Label("=== WEAPON SYSTEM DEBUG ===", headerStyle);
+        GUILayout.Space(5);
+
+        GUILayout.Label($"Weapon: {weaponName}", labelStyle);
+        GUILayout.Label($"Ammo: {currentAmmo} / {magSize}", labelStyle);
+        GUILayout.Label($"Reserve: {reserveAmmo} ({magCount} mags)", labelStyle);
+
+        GUILayout.Space(10);
+        GUILayout.Label("=== SCOPE ===", headerStyle);
+        GUILayout.Label($"Scope: {(currentScope != null ? currentScope.scopeName : "None")}", labelStyle);
+        GUILayout.Label($"ADS: {(isADS ? "YES" : "NO")}", labelStyle);
+        GUILayout.Label($"FOV: {playerCamera.fieldOfView:F1}", labelStyle);
+        GUILayout.Label($"Zoom: {currentZoomLevel:F1}x", labelStyle);
+        GUILayout.Label($"Mount: {(scopeMountPoint != null ? "Assigned" : "NOT ASSIGNED")}", labelStyle);
 
         GUILayout.EndArea();
     }
 
+    // === PUBLIC API ===
     public bool IsADS() => isADS;
+    public float GetCurrentZoom() => currentZoomLevel;
     public ScopeData GetCurrentScope() => currentScope;
 }

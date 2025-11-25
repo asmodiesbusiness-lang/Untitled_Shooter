@@ -16,12 +16,12 @@ MonoBehaviour:
   scopeModelPrefab: {fileID: 4460850942877621475, guid: 03a167e685b5e9d4ab9f394f1bc336f5, type: 3}
   modelPositionOffset: {x: 0.01, y: -0.02, z: 0}
   modelRotationOffset: {x: 0, y: 0, z: 0}
-  minZoomLevel: 1
-  maxZoomLevel: 1
-  zoomStepSize: 0.5
-  allowScrollZoom: 1
-  fovAtMinZoom: 30
-  fovAtMaxZoom: 60
+  minZoomLevel: 1.5
+  maxZoomLevel: 1.5
+  zoomStepSize: 0
+  allowScrollZoom: 0
+  fovAtMinZoom: 35
+  fovAtMaxZoom: 35
   fovTransitionSpeed: 10
   adsCameraPosition: {x: 0, y: 0.1, z: -0.5}
   adsTransitionSpeed: 8

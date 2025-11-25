@@ -1,157 +1,176 @@
 using UnityEngine;
 
 /// <summary>
-/// Handles all weapon visual animations: ADS, sway, breathing, bob, tilt, sprint
+/// Handles weapon visual animations: deadzone, sway, bob, breathing, tilt
+/// Sends offsets to WeaponPositionController
 /// Attach to Player GameObject
 /// </summary>
 public class CharacterAnimatorController : MonoBehaviour
 {
     [Header("=== REFERENCES ===")]
-    [Tooltip("The transform that holds the weapon (where WeaponManager spawns weapons)")]
-    public Transform weaponHolder;
-
     [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private ScopeManager scopeManager;
+    [SerializeField] private WeaponPositionController weaponPositionController;
 
-    [Header("=== ADS SETTINGS ===")]
-    [SerializeField] private KeyCode aimKey = KeyCode.Mouse1;
-    [SerializeField] private float adsSpeed = 8f;
-    [SerializeField] private float adsFOV = 50f;
-    [SerializeField] private float defaultFOV = 60f;
-    [SerializeField] private float adsRecoilReduction = 0.5f;
+    [Header("=== WEAPON DEADZONE ===")]
+    [SerializeField] private bool enableDeadzone = true;
+    [SerializeField] private float maxDeadzoneAngle = 5f;
+    [SerializeField] private float deadzoneSmoothing = 10f;
+    [Range(0f, 1f)]
+    [SerializeField] private float adsDeadzoneMultiplier = 0.2f;
 
     [Header("=== WEAPON SWAY ===")]
+    [SerializeField] private bool enableSway = true;
     [SerializeField] private float swayAmount = 0.02f;
     [SerializeField] private float swaySmoothing = 6f;
     [SerializeField] private float adsSwayMultiplier = 0.3f;
 
     [Header("=== WEAPON BOB ===")]
+    [SerializeField] private bool enableBob = true;
     [SerializeField] private float bobAmount = 0.02f;
     [SerializeField] private float bobSpeed = 10f;
 
     [Header("=== BREATHING ===")]
+    [SerializeField] private bool enableBreathing = true;
     [SerializeField] private float breathingAmount = 0.001f;
     [SerializeField] private float breathingSpeed = 2f;
 
     [Header("=== WEAPON TILT ===")]
+    [SerializeField] private bool enableTilt = true;
     [SerializeField] private float tiltAmount = 2f;
-    [SerializeField] private float tiltSpeed = 5f;
 
-    private Camera playerCamera;
-    private bool isAiming = false;
+    [Header("=== RECOIL REDUCTION ===")]
+    [SerializeField] private float adsRecoilReduction = 0.5f;
+
     private float bobTimer = 0f;
     private float breathTimer = 0f;
 
+    private Vector3 currentDeadzoneRotation;
+    private Vector3 targetDeadzoneRotation;
     private Vector3 swayPosition;
-    private Vector3 targetWeaponPosition;
-    private Quaternion targetWeaponRotation;
 
     void Start()
     {
-        playerCamera = Camera.main;
-
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
 
-        if (weaponHolder == null)
-        {
-            // Try to find WeaponHolder under camera
-            Transform camTransform = playerCamera != null ? playerCamera.transform : transform;
-            weaponHolder = camTransform.Find("WeaponHolder");
+        if (scopeManager == null)
+            scopeManager = FindFirstObjectByType<ScopeManager>();
 
-            if (weaponHolder == null)
+        if (weaponPositionController == null)
+            weaponPositionController = GetComponent<WeaponPositionController>();
+    }
+
+    void LateUpdate()
+    {
+        CalculateAndApplyOffsets();
+    }
+
+    bool IsAiming()
+    {
+        if (scopeManager != null)
+            return scopeManager.IsADS();
+        return Input.GetKey(KeyCode.Mouse1);
+    }
+
+    void CalculateAndApplyOffsets()
+    {
+        bool isAiming = IsAiming();
+        bool isSprinting = playerMovement != null && playerMovement.IsSprinting();
+
+        // === POSITION OFFSET ===
+        Vector3 positionOffset = Vector3.zero;
+
+        // Mouse Sway (reduced when ADS, disabled when sprinting)
+        if (enableSway && !isSprinting)
+        {
+            float mouseX = Input.GetAxis("Mouse X");
+            float mouseY = Input.GetAxis("Mouse Y");
+            float swayMult = isAiming ? adsSwayMultiplier : 1f;
+            Vector3 targetSway = new Vector3(-mouseY, mouseX, 0f) * swayAmount * swayMult;
+            swayPosition = Vector3.Lerp(swayPosition, targetSway, Time.deltaTime * swaySmoothing);
+            positionOffset += swayPosition;
+        }
+
+        // Movement Bob (disabled when ADS or sprinting)
+        if (enableBob && !isAiming && !isSprinting)
+        {
+            float h = Input.GetAxis("Horizontal");
+            float v = Input.GetAxis("Vertical");
+            bool isMoving = Mathf.Abs(h) > 0.1f || Mathf.Abs(v) > 0.1f;
+
+            if (isMoving)
             {
-                Debug.LogError("[CharacterAnimatorController] weaponHolder not assigned and couldn't find WeaponHolder!");
+                bobTimer += Time.deltaTime * bobSpeed;
+                positionOffset += new Vector3(
+                    Mathf.Sin(bobTimer) * bobAmount,
+                    Mathf.Sin(bobTimer * 2f) * bobAmount,
+                    0f
+                );
+            }
+            else
+            {
+                bobTimer = 0f;
             }
         }
-    }
 
-    void Update()
-    {
-        HandleADS();
-
-        if (weaponHolder != null && weaponHolder.childCount > 0)
+        // Breathing (reduced when ADS)
+        if (enableBreathing && !isSprinting)
         {
-            Transform weapon = weaponHolder.GetChild(0);
-            UpdateWeaponAnimations(weapon);
-        }
-    }
-
-    void HandleADS()
-    {
-        isAiming = Input.GetKey(aimKey);
-
-        if (playerCamera != null)
-        {
-            float targetFOV = isAiming ? adsFOV : defaultFOV;
-            playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, Time.deltaTime * adsSpeed);
-        }
-    }
-
-    void UpdateWeaponAnimations(Transform weapon)
-    {
-        // Mouse sway
-        float mouseX = Input.GetAxis("Mouse X");
-        float mouseY = Input.GetAxis("Mouse Y");
-
-        float swayMultiplier = isAiming ? adsSwayMultiplier : 1f;
-        Vector3 targetSway = new Vector3(-mouseY, mouseX, 0f) * swayAmount * swayMultiplier;
-        swayPosition = Vector3.Lerp(swayPosition, targetSway, Time.deltaTime * swaySmoothing);
-
-        // Movement bob - detect movement via input instead
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-        bool isMoving = (Mathf.Abs(horizontal) > 0.1f || Mathf.Abs(vertical) > 0.1f);
-
-        if (isMoving && !isAiming)
-        {
-            bobTimer += Time.deltaTime * bobSpeed;
-        }
-        else
-        {
-            bobTimer = 0f;
-        }
-
-        Vector3 bobOffset = Vector3.zero;
-        if (isMoving && !isAiming)
-        {
-            bobOffset = new Vector3(
-                Mathf.Sin(bobTimer) * bobAmount,
-                Mathf.Sin(bobTimer * 2f) * bobAmount,
+            breathTimer += Time.deltaTime * breathingSpeed;
+            float breathMult = isAiming ? 0.5f : 1f;
+            positionOffset += new Vector3(
+                Mathf.Sin(breathTimer) * breathingAmount * breathMult,
+                Mathf.Sin(breathTimer * 0.5f) * breathingAmount * breathMult,
                 0f
             );
         }
 
-        // Breathing
-        breathTimer += Time.deltaTime * breathingSpeed;
-        float breathMultiplier = isAiming ? 0.5f : 1f;
-        Vector3 breathOffset = new Vector3(
-            Mathf.Sin(breathTimer) * breathingAmount * breathMultiplier,
-            Mathf.Sin(breathTimer * 0.5f) * breathingAmount * breathMultiplier,
-            0f
-        );
+        // === ROTATION OFFSET ===
+        Vector3 rotationOffset = Vector3.zero;
 
-        // Weapon tilt on strafe
-        float tiltAngle = 0f;
-        if (!isAiming)
+        // Deadzone (reduced when ADS, disabled when sprinting)
+        if (enableDeadzone && !isSprinting)
         {
-            tiltAngle = -horizontal * tiltAmount;
+            Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+            Vector3 mousePos = Input.mousePosition;
+
+            float offsetX = Mathf.Clamp((mousePos.x - screenCenter.x) / (Screen.width * 0.5f), -1f, 1f);
+            float offsetY = Mathf.Clamp((mousePos.y - screenCenter.y) / (Screen.height * 0.5f), -1f, 1f);
+
+            float effectiveAngle = maxDeadzoneAngle * (isAiming ? adsDeadzoneMultiplier : 1f);
+
+            targetDeadzoneRotation = new Vector3(
+                -offsetY * effectiveAngle,
+                offsetX * effectiveAngle,
+                0f
+            );
+
+            currentDeadzoneRotation = Vector3.Lerp(
+                currentDeadzoneRotation,
+                targetDeadzoneRotation,
+                Time.deltaTime * deadzoneSmoothing
+            );
+
+            rotationOffset += currentDeadzoneRotation;
         }
 
-        // Apply all animations
-        targetWeaponPosition = swayPosition + bobOffset + breathOffset;
-        targetWeaponRotation = Quaternion.Euler(0f, 0f, tiltAngle);
+        // Strafe Tilt (disabled when ADS or sprinting)
+        if (enableTilt && !isAiming && !isSprinting)
+        {
+            float h = Input.GetAxis("Horizontal");
+            rotationOffset.z += -h * tiltAmount;
+        }
 
-        weapon.localPosition = Vector3.Lerp(weapon.localPosition, targetWeaponPosition, Time.deltaTime * swaySmoothing);
-        weapon.localRotation = Quaternion.Slerp(weapon.localRotation, targetWeaponRotation, Time.deltaTime * tiltSpeed);
+        // Send offsets to WeaponPositionController
+        if (weaponPositionController != null)
+        {
+            weaponPositionController.SetAnimationOffset(positionOffset, rotationOffset);
+        }
     }
 
-    public bool IsAiming()
-    {
-        return isAiming;
-    }
-
-    public float GetADSRecoilMultiplier()
-    {
-        return isAiming ? adsRecoilReduction : 1f;
-    }
+    // === PUBLIC API ===
+    public bool IsADS() => IsAiming();
+    public float GetADSRecoilMultiplier() => IsAiming() ? adsRecoilReduction : 1f;
+    public Vector3 GetDeadzoneRotation() => currentDeadzoneRotation;
 }
